@@ -41,10 +41,13 @@ void CheckTrajectoryOptions(const TrajectoryOptions& options) {
 TrajectoryOptions CreateTrajectoryOptions(
     ::cartographer::common::LuaParameterDictionary* const
         lua_parameter_dictionary) {
+
   TrajectoryOptions options;
+
   options.trajectory_builder_options =
       ::cartographer::mapping::CreateTrajectoryBuilderOptions(
           lua_parameter_dictionary->GetDictionary("trajectory_builder").get());
+          
   options.tracking_frame =
       lua_parameter_dictionary->GetString("tracking_frame");
   options.published_frame =
