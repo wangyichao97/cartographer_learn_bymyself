@@ -56,6 +56,14 @@ namespace cartographer_ros {
 // Wires up ROS topics to SLAM.
 class Node {
  public:
+ /**
+ * @brief 
+ * 声明ros 的一些topic发布器，服务的发布器,与时间驱动的服务器与时间绑定
+ * @param node_opions 配置文件的内容
+ * @param map_builder SLAM算法的具体实现
+ * @param tf_buffer tf
+ * @param collect_metrics 是否启用metrics，默认不启用
+*/
   Node(const NodeOptions& node_options,
        std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
        tf2_ros::Buffer* tf_buffer, bool collect_metrics);
