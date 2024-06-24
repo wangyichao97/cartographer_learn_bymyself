@@ -29,18 +29,10 @@ namespace sensor {
 // detected. 'misses' are points in the direction of rays for which no return
 // was detected, and were inserted at a configured distance. It is assumed that
 // between the 'origin' and 'misses' is free space.
-
-/**
- * @brief local_slam_data中存储所有雷达点云的数据结构
- * 
- * @param origin  点云的原点在local坐标系下的坐标
- * @param returns 所有雷达数据点在local坐标系下的坐标, 记为returns, 也就是hit
- * @param misses  是在光线方向上未检测到返回的点(nan, inf等等)或超过最大配置距离的点
- */
 struct RangeData {
   Eigen::Vector3f origin;
   PointCloud returns;
-  PointCloud misses; // local坐标系下的坐标
+  PointCloud misses;
 };
 
 RangeData TransformRangeData(const RangeData& range_data,

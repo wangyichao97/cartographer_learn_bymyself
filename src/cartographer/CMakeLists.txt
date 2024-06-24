@@ -27,7 +27,7 @@ option(BUILD_PROMETHEUS "build Prometheus monitoring support" false)
 
 include("${PROJECT_SOURCE_DIR}/cmake/functions.cmake")
 google_initialize_cartographer_project()
-# google_enable_testing()
+google_enable_testing()
 
 find_package(absl REQUIRED)
 set(BOOST_COMPONENTS iostreams)
@@ -86,7 +86,6 @@ file(GLOB_RECURSE ALL_TESTS "cartographer/*_test.cc")
 file(GLOB_RECURSE ALL_EXECUTABLES "cartographer/*_main.cc")
 
 # Remove dotfiles/-folders that could potentially pollute the build.
-# 移除所有以.开头的文件
 file(GLOB_RECURSE ALL_DOTFILES ".*/*")
 if (ALL_DOTFILES)
   list(REMOVE_ITEM ALL_LIBRARY_HDRS ${ALL_DOTFILES})
@@ -96,7 +95,6 @@ if (ALL_DOTFILES)
   list(REMOVE_ITEM ALL_TESTS ${ALL_DOTFILES})
   list(REMOVE_ITEM ALL_EXECUTABLES ${ALL_DOTFILES})
 endif()
-
 list(REMOVE_ITEM ALL_LIBRARY_SRCS ${ALL_EXECUTABLES})
 list(REMOVE_ITEM ALL_LIBRARY_SRCS ${ALL_TESTS})
 list(REMOVE_ITEM ALL_LIBRARY_HDRS ${TEST_LIBRARY_HDRS})
@@ -120,10 +118,7 @@ if (NOT ${BUILD_PROMETHEUS})
   list(REMOVE_ITEM ALL_TESTS ${ALL_PROMETHEUS_FILES})
   list(REMOVE_ITEM ALL_EXECUTABLES ${ALL_PROMETHEUS_FILES})
 endif()
-
 set(INSTALL_SOURCE_HDRS ${ALL_LIBRARY_HDRS} ${TEST_LIBRARY_HDRS})
-
-# 移除internal文件夹内的头文件,不进行安装
 file(GLOB_RECURSE INTERNAL_HDRS "cartographer/*/internal/*.h")
 list(REMOVE_ITEM INSTALL_SOURCE_HDRS ${INTERNAL_HDRS})
 
@@ -157,8 +152,6 @@ foreach(ABS_FIL ${ALL_PROTOS})
   )
 endforeach()
 set_source_files_properties(${ALL_PROTO_SRCS} ${ALL_PROTO_HDRS} PROPERTIES GENERATED TRUE)
-
-# 添加.pb.h与.pb.cc到头文件源文件列表
 list(APPEND ALL_LIBRARY_HDRS ${ALL_PROTO_HDRS})
 list(APPEND ALL_LIBRARY_SRCS ${ALL_PROTO_SRCS})
 
@@ -191,7 +184,6 @@ if(${BUILD_GRPC})
 endif()
 set(INSTALL_GENERATED_HDRS ${ALL_PROTO_HDRS} ${ALL_GRPC_SERVICE_HDRS})
 
-# 生成cartographer库文件
 add_library(${PROJECT_NAME} STATIC ${ALL_LIBRARY_HDRS} ${ALL_LIBRARY_SRCS})
 
 configure_file(
@@ -308,43 +300,39 @@ set(TARGET_COMPILE_FLAGS "${TARGET_COMPILE_FLAGS} ${GOOG_CXX_FLAGS}")
 set_target_properties(${PROJECT_NAME} PROPERTIES
   COMPILE_FLAGS ${TARGET_COMPILE_FLAGS})
 
-# 不编译test_library
+set(TEST_LIB
+  cartographer_test_library
+)
+add_library(${TEST_LIB} ${TEST_LIBRARY_HDRS} ${TEST_LIBRARY_SRCS})
+target_include_directories(${TEST_LIB} SYSTEM PRIVATE
+  "${GMOCK_INCLUDE_DIRS}")
+# Needed for dynamically linked GTest on Windows.
+if (WIN32)
+  target_compile_definitions(${TEST_LIB} PUBLIC -DGTEST_LINKED_AS_SHARED_LIBRARY)
+endif()
+target_link_libraries(${TEST_LIB} PUBLIC ${GMOCK_LIBRARY})
+target_link_libraries(${TEST_LIB} PUBLIC ${PROJECT_NAME})
+set_target_properties(${TEST_LIB} PROPERTIES
+  COMPILE_FLAGS ${TARGET_COMPILE_FLAGS})
 
-# set(TEST_LIB
-#   cartographer_test_library
-# )
-# add_library(${TEST_LIB} ${TEST_LIBRARY_HDRS} ${TEST_LIBRARY_SRCS})
-# target_include_directories(${TEST_LIB} SYSTEM PRIVATE
-#   "${GMOCK_INCLUDE_DIRS}")
-# # Needed for dynamically linked GTest on Windows.
-# if (WIN32)
-#   target_compile_definitions(${TEST_LIB} PUBLIC -DGTEST_LINKED_AS_SHARED_LIBRARY)
-# endif()
-# target_link_libraries(${TEST_LIB} PUBLIC ${GMOCK_LIBRARY})
-# target_link_libraries(${TEST_LIB} PUBLIC ${PROJECT_NAME})
-# set_target_properties(${TEST_LIB} PROPERTIES
-#   COMPILE_FLAGS ${TARGET_COMPILE_FLAGS})
-
-# 不编译_test.cc文件
-
-# foreach(ABS_FIL ${ALL_TESTS})
-#   file(RELATIVE_PATH REL_FIL ${PROJECT_SOURCE_DIR} ${ABS_FIL})
-#   get_filename_component(DIR ${REL_FIL} DIRECTORY)
-#   get_filename_component(FIL_WE ${REL_FIL} NAME_WE)
-#   # Replace slashes as required for CMP0037.
-#   string(REPLACE "/" "." TEST_TARGET_NAME "${DIR}/${FIL_WE}")
-#   google_test("${TEST_TARGET_NAME}" ${ABS_FIL})
-#   if(${BUILD_GRPC})
-#     target_link_libraries("${TEST_TARGET_NAME}" PUBLIC grpc++)
-#     target_link_libraries("${TEST_TARGET_NAME}" PUBLIC async_grpc)
-#   endif()
-#   if(${BUILD_PROMETHEUS})
-#     target_link_libraries("${TEST_TARGET_NAME}" PUBLIC ${ZLIB_LIBRARIES})
-#     target_link_libraries("${TEST_TARGET_NAME}" PUBLIC prometheus-cpp-core)
-#     target_link_libraries("${TEST_TARGET_NAME}" PUBLIC prometheus-cpp-pull)
-#   endif()
-#   target_link_libraries("${TEST_TARGET_NAME}" PUBLIC ${TEST_LIB})
-# endforeach()
+foreach(ABS_FIL ${ALL_TESTS})
+  file(RELATIVE_PATH REL_FIL ${PROJECT_SOURCE_DIR} ${ABS_FIL})
+  get_filename_component(DIR ${REL_FIL} DIRECTORY)
+  get_filename_component(FIL_WE ${REL_FIL} NAME_WE)
+  # Replace slashes as required for CMP0037.
+  string(REPLACE "/" "." TEST_TARGET_NAME "${DIR}/${FIL_WE}")
+  google_test("${TEST_TARGET_NAME}" ${ABS_FIL})
+  if(${BUILD_GRPC})
+    target_link_libraries("${TEST_TARGET_NAME}" PUBLIC grpc++)
+    target_link_libraries("${TEST_TARGET_NAME}" PUBLIC async_grpc)
+  endif()
+  if(${BUILD_PROMETHEUS})
+    target_link_libraries("${TEST_TARGET_NAME}" PUBLIC ${ZLIB_LIBRARIES})
+    target_link_libraries("${TEST_TARGET_NAME}" PUBLIC prometheus-cpp-core)
+    target_link_libraries("${TEST_TARGET_NAME}" PUBLIC prometheus-cpp-pull)
+  endif()
+  target_link_libraries("${TEST_TARGET_NAME}" PUBLIC ${TEST_LIB})
+endforeach()
 
 # Add the binary directory first, so that port.h is included after it has
 # been generated.
@@ -354,7 +342,6 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     $<INSTALL_INTERFACE:include>
 )
 
-# 安装cartographer库
 install(
   TARGETS ${PROJECT_NAME}
   EXPORT CartographerExport
@@ -363,7 +350,6 @@ install(
   RUNTIME DESTINATION bin
 )
 
-# 安装头文件
 foreach(HDR ${INSTALL_SOURCE_HDRS})
   file(RELATIVE_PATH REL_FIL ${PROJECT_SOURCE_DIR} ${HDR})
   get_filename_component(DIR ${REL_FIL} DIRECTORY)

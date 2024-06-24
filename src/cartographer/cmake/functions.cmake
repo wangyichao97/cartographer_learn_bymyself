@@ -22,7 +22,7 @@ macro(_parse_arguments ARGS)
     "${OPTIONS}" "${ONE_VALUE_ARG}" "${MULTI_VALUE_ARGS}" ${ARGS})
 endmacro(_parse_arguments)
 
-macro(_common_compile_stuff VISIBILITY)
+macro(_common_compile_stuff)
   set(TARGET_COMPILE_FLAGS "${TARGET_COMPILE_FLAGS} ${GOOG_CXX_FLAGS}")
 
   set_target_properties(${NAME} PROPERTIES
@@ -34,7 +34,7 @@ endmacro(_common_compile_stuff)
 
 function(google_test NAME ARG_SRC)
   add_executable(${NAME} ${ARG_SRC})
-  _common_compile_stuff("PRIVATE")
+  _common_compile_stuff()
 
   # Make sure that gmock always includes the correct gtest/gtest.h.
   target_include_directories("${NAME}" SYSTEM PRIVATE
@@ -44,13 +44,12 @@ function(google_test NAME ARG_SRC)
   add_test(${NAME} ${NAME})
 endfunction()
 
-# 生成可执行文件
 function(google_binary NAME)
   _parse_arguments("${ARGN}")
 
   add_executable(${NAME} ${ARG_SRCS})
 
-  _common_compile_stuff("PRIVATE")
+  _common_compile_stuff()
 
   install(TARGETS "${NAME}" RUNTIME DESTINATION bin)
 endfunction()
@@ -78,10 +77,6 @@ macro(google_initialize_cartographer_project)
     # TODO turn on equivalent warnings on Windows
   else()
     set(GOOG_CXX_FLAGS "-pthread -fPIC ${GOOG_CXX_FLAGS}")
-
-    if (CMAKE_CXX_COMPILER_ID MATCHES "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.1)
-      google_add_flag(GOOG_CXX_FLAGS "-std=c++11")
-    endif()
 
     google_add_flag(GOOG_CXX_FLAGS "-Wall")
     google_add_flag(GOOG_CXX_FLAGS "-Wpedantic")

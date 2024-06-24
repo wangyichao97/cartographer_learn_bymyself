@@ -65,17 +65,13 @@ Getting started without ROS
 Please see our ROS integration as a starting point for integrating your system
 with the standalone library. Currently, it is the best available reference.
 
-On Ubuntu 16.04 (Xenial):
+On Ubuntu 18.04 (Bionic):
 
 .. literalinclude:: ../../scripts/install_debs_cmake.sh
   :language: bash
   :lines: 20-
 
 .. literalinclude:: ../../scripts/install_abseil.sh
-  :language: bash
-  :lines: 20-
-
-.. literalinclude:: ../../scripts/install_ceres.sh
   :language: bash
   :lines: 20-
 
@@ -97,8 +93,8 @@ on systems that meet the following requirements:
 
 * 64-bit, modern CPU (e.g. 3rd generation i7)
 * 16 GB RAM
-* Ubuntu 16.04 (Xenial), 18.04 (Bionic), 20.04 (Focal)
-* gcc version 4.8.4, 5.4.0, 7.5.0, 9.3.0
+* Ubuntu 18.04 (Bionic), 20.04 (Focal), 22.04 (Jammy)
+* gcc version 7.5.0, 8.3.0, 9.3.0, 10.2.1, 11.2.0
 
 Known Issues
 ------------

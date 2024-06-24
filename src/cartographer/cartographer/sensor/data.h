@@ -29,7 +29,6 @@ class TrajectoryBuilderInterface;
 
 namespace sensor {
 
-// Dispatchable的基类
 class Data {
  public:
   explicit Data(const std::string &sensor_id) : sensor_id_(sensor_id) {}

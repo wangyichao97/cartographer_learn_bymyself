@@ -25,7 +25,6 @@
 namespace cartographer {
 namespace mapping {
 
-// 从proto::Submap格式生成mapping::Submap2D 格式的地图
 template <class SubmapType>
 class SubmapController {
  public:

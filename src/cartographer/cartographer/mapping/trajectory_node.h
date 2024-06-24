@@ -30,7 +30,6 @@
 namespace cartographer {
 namespace mapping {
 
-// 包含节点的在global map下的坐标, 在local map 下的坐标与时间
 struct TrajectoryNodePose {
   struct ConstantPoseData {
     common::Time time;
@@ -42,10 +41,7 @@ struct TrajectoryNodePose {
   absl::optional<ConstantPoseData> constant_pose_data;
 };
 
-// tag: TrajectoryNode
-// 节点在global坐标系下的位姿, 与前端的结果
 struct TrajectoryNode {
-  // 前端匹配所用的数据与计算出的local坐标系下的位姿
   struct Data {
     common::Time time;
 
@@ -70,10 +66,10 @@ struct TrajectoryNode {
 
   // This must be a shared_ptr. If the data is used for visualization while the
   // node is being trimmed, it must survive until all use finishes.
-  std::shared_ptr<const Data> constant_data; // 不会被后端优化修改的数据, 所以是constant
+  std::shared_ptr<const Data> constant_data;
 
   // The node pose in the global SLAM frame.
-  transform::Rigid3d global_pose; // 后端优化后, global_pose会发生改变
+  transform::Rigid3d global_pose;
 };
 
 proto::TrajectoryNodeData ToProto(const TrajectoryNode::Data& constant_data);

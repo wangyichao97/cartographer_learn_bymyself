@@ -39,9 +39,7 @@ struct PaintSubmapSlicesResult {
   Eigen::Array2f origin;
 };
 
-// 地图的完整信息, 栅格数据是Cairo格式的
 struct SubmapSlice {
-  // 构造时使surface为指向nullptr
   SubmapSlice()
       : surface(::cartographer::io::MakeUniqueCairoSurfacePtr(nullptr)) {}
 
@@ -51,7 +49,7 @@ struct SubmapSlice {
   int version;
   double resolution;
   ::cartographer::transform::Rigid3d slice_pose;
-  ::cartographer::io::UniqueCairoSurfacePtr surface;    // surface是图形库cairo的image画布
+  ::cartographer::io::UniqueCairoSurfacePtr surface;
   // Pixel data used by 'surface'. Must outlive 'surface'.
   std::vector<uint32_t> cairo_data;
 
@@ -60,11 +58,10 @@ struct SubmapSlice {
   int metadata_version = -1;
 };
 
-// 解压后的地图栅格数据
 struct SubmapTexture {
   struct Pixels {
-    std::vector<char> intensity;  // 地图栅格值
-    std::vector<char> alpha;      // 栅格的透明度
+    std::vector<char> intensity;
+    std::vector<char> alpha;
   };
   Pixels pixels;
   int width;
@@ -73,7 +70,6 @@ struct SubmapTexture {
   ::cartographer::transform::Rigid3d slice_pose;
 };
 
-// 压缩后的地图栅格数据
 struct SubmapTextures {
   int version;
   std::vector<SubmapTexture> textures;

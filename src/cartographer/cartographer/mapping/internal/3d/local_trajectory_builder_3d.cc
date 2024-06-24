@@ -71,7 +71,6 @@ std::unique_ptr<transform::Rigid3d> LocalTrajectoryBuilder3D::ScanMatch(
       active_submaps_.submaps().front();
   transform::Rigid3d initial_ceres_pose =
       matching_submap->local_pose().inverse() * pose_prediction;
-  // 粗匹配
   if (options_.use_online_correlative_scan_matching()) {
     // We take a copy since we use 'initial_ceres_pose' as an output argument.
     const transform::Rigid3d initial_pose = initial_ceres_pose;
@@ -96,7 +95,6 @@ std::unique_ptr<transform::Rigid3d> LocalTrajectoryBuilder3D::ScanMatch(
                             &matching_submap->low_resolution_hybrid_grid(),
                             /*intensity_hybrid_grid=*/nullptr}},
       &pose_observation_in_submap, &summary);
-  
   kCeresScanMatcherCostMetric->Observe(summary.final_cost);
   const double residual_distance = (pose_observation_in_submap.translation() -
                                     initial_ceres_pose.translation())
@@ -138,7 +136,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
         << "Passed point cloud has inconsistent number of intensities and "
            "ranges.";
   }
-  // Step: 1 进行多个雷达点云数据的时间同步
   auto synchronized_data =
       range_data_collator_.AddRangeData(sensor_id, unsynchronized_data);
   if (synchronized_data.ranges.empty()) {
@@ -167,10 +164,8 @@ LocalTrajectoryBuilder3D::AddRangeData(
     accumulated_point_cloud_origin_data_.clear();
   }
 
-  // Step: 2 对点云进行第一次体素滤波
   synchronized_data.ranges = sensor::VoxelFilter(
       synchronized_data.ranges, 0.5f * options_.voxel_filter_size());
-  // 将体素滤波之后的点存起来
   accumulated_point_cloud_origin_data_.emplace_back(
       std::move(synchronized_data));
   ++num_accumulated_;
@@ -183,7 +178,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
   bool warned = false;
   std::vector<common::Time> hit_times;
   common::Time prev_time_point = extrapolator_->GetLastExtrapolatedTime();
-  // 计算每个点的时间戳存到 hit_times 中
   for (const auto& point_cloud_origin_data :
        accumulated_point_cloud_origin_data_) {
     for (const auto& hit : point_cloud_origin_data.ranges) {
@@ -201,11 +195,10 @@ LocalTrajectoryBuilder3D::AddRangeData(
 
       hit_times.push_back(time_point);
       prev_time_point = time_point;
-    } 
+    }
   }
   hit_times.push_back(accumulated_point_cloud_origin_data_.back().time);
 
-  // Step: 3 预测出 每个点的时间戳时刻, tracking frame 在 local slam 坐标系下的位姿
   const PoseExtrapolatorInterface::ExtrapolationResult extrapolation_result =
       extrapolator_->ExtrapolatePosesWithGravity(hit_times);
   std::vector<transform::Rigid3f> hits_poses(
@@ -223,7 +216,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
   sensor::PointCloud misses;
   std::vector<transform::Rigid3f>::const_iterator hits_poses_it =
       hits_poses.begin();
-  // Step: 4 计算 returns 与 misses 点的坐标
   for (const auto& point_cloud_origin_data :
        accumulated_point_cloud_origin_data_) {
     for (const auto& hit : point_cloud_origin_data.ranges) {
@@ -235,7 +227,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
       const float range = delta.norm();
       if (range >= options_.min_range()) {
         if (range <= options_.max_range()) {
-          // 将hit点存在 accumulated_points 中
           accumulated_points.push_back(sensor::RangefinderPoint{hit_in_local});
           if (options_.use_intensities()) {
             accumulated_intensities.push_back(hit.intensity);
@@ -246,7 +237,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
           // will be updated.
           // TODO(wohe): since `misses` are not used anywhere in 3D, consider
           // removing `misses` from `range_data` and/or everywhere in 3D.
-          // 将miss点存在 misses 中
           misses.push_back(sensor::RangefinderPoint{
               origin_in_local + options_.max_range() / range * delta});
         }
@@ -265,7 +255,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
   }
   last_sensor_time_ = current_sensor_time;
 
-  // Step: 5 分别对 returns 与 misses 进行体素滤波
   const common::Time current_time = hit_times.back();
   const auto voxel_filter_start = std::chrono::steady_clock::now();
   const sensor::RangeData filtered_range_data = {
@@ -284,7 +273,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
 
   return AddAccumulatedRangeData(
       current_time,
-      // Step: 6 将原点位于机器人当前位姿处的点云 转成 原点位于local坐标系原点处的点云
       sensor::TransformRangeData(
           filtered_range_data,
           extrapolation_result.current_pose.inverse().cast<float>()),
@@ -292,16 +280,6 @@ LocalTrajectoryBuilder3D::AddRangeData(
       extrapolation_result.gravity_from_tracking);
 }
 
-/**
- * @brief 进行扫描匹配, 将点云写入地图
- * 
- * @param[in] time 点云的时间
- * @param[in] filtered_range_data_in_tracking 原点位于local坐标系原点处的点云
- * @param[in] sensor_duration 2帧点云数据的时间差
- * @param[in] pose_prediction 预测出的当前位姿
- * @param[in] gravity_alignment 
- * @return std::unique_ptr<LocalTrajectoryBuilder3D::MatchingResult> 
- */
 std::unique_ptr<LocalTrajectoryBuilder3D::MatchingResult>
 LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
     const common::Time time,
@@ -316,7 +294,6 @@ LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
 
   const auto scan_matcher_start = std::chrono::steady_clock::now();
 
-  // Step: 7 使用高分辨率进行自适应体素滤波 生成高分辨率点云
   const sensor::PointCloud high_resolution_point_cloud_in_tracking =
       sensor::AdaptiveVoxelFilter(
           filtered_range_data_in_tracking.returns,
@@ -325,8 +302,6 @@ LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
     LOG(WARNING) << "Dropped empty high resolution point cloud data.";
     return nullptr;
   }
-
-  // Step: 8 使用低分辨率进行自适应体素滤波 生成低分辨率点云
   const sensor::PointCloud low_resolution_point_cloud_in_tracking =
       sensor::AdaptiveVoxelFilter(
           filtered_range_data_in_tracking.returns,
@@ -336,7 +311,6 @@ LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
     return nullptr;
   }
 
-  // 进行扫描匹配
   std::unique_ptr<transform::Rigid3d> pose_estimate =
       ScanMatch(pose_prediction, low_resolution_point_cloud_in_tracking,
                 high_resolution_point_cloud_in_tracking);
@@ -344,7 +318,6 @@ LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
     LOG(WARNING) << "Scan matching failed.";
     return nullptr;
   }
-
   extrapolator_->AddPose(time, *pose_estimate);
 
   const auto scan_matcher_stop = std::chrono::steady_clock::now();
@@ -356,7 +329,6 @@ LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
     kLocalSlamScanMatcherFraction->Set(scan_matcher_fraction);
   }
 
-  // Step: 9 将 原点位于local坐标系原点处的点云 变换成 原点位于匹配后的位姿处的点云
   sensor::RangeData filtered_range_data_in_local = sensor::TransformRangeData(
       filtered_range_data_in_tracking, pose_estimate->cast<float>());
 
@@ -376,7 +348,6 @@ LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
         common::ToSeconds(sensor_duration.value());
     kLocalSlamInsertIntoSubmapFraction->Set(insert_into_submap_fraction);
   }
-
   const auto wall_time = std::chrono::steady_clock::now();
   if (last_wall_time_.has_value()) {
     const auto wall_time_duration = wall_time - last_wall_time_.value();
@@ -398,7 +369,6 @@ LocalTrajectoryBuilder3D::AddAccumulatedRangeData(
   }
   last_wall_time_ = wall_time;
   last_thread_cpu_time_seconds_ = thread_cpu_time_seconds;
-  
   return absl::make_unique<MatchingResult>(MatchingResult{
       time, *pose_estimate, std::move(filtered_range_data_in_local),
       std::move(insertion_result)});
@@ -426,14 +396,12 @@ LocalTrajectoryBuilder3D::InsertIntoSubmap(
   if (motion_filter_.IsSimilar(time, pose_estimate)) {
     return nullptr;
   }
-
-  // 计算根据重力方向校正后点云的直方图
   const Eigen::VectorXf rotational_scan_matcher_histogram_in_gravity =
       scan_matching::RotationalScanMatcher::ComputeHistogram(
           sensor::TransformPointCloud(
               filtered_range_data_in_tracking.returns,
               transform::Rigid3f::Rotation(gravity_alignment.cast<float>())),
-          options_.rotational_histogram_size()); // rotational_histogram_size=120
+          options_.rotational_histogram_size());
 
   const Eigen::Quaterniond local_from_gravity_aligned =
       pose_estimate.rotation() * gravity_alignment.inverse();
@@ -441,7 +409,6 @@ LocalTrajectoryBuilder3D::InsertIntoSubmap(
       active_submaps_.InsertData(filtered_range_data_in_local,
                                  local_from_gravity_aligned,
                                  rotational_scan_matcher_histogram_in_gravity);
-  
   return absl::make_unique<InsertionResult>(
       InsertionResult{std::make_shared<const mapping::TrajectoryNode::Data>(
                           mapping::TrajectoryNode::Data{

@@ -31,7 +31,6 @@
 namespace cartographer {
 namespace mapping {
 
-// 地图x方向与y方向的格子数
 struct CellLimits {
   CellLimits() = default;
   CellLimits(int init_num_x_cells, int init_num_y_cells)

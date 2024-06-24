@@ -28,9 +28,6 @@ TfBridge::TfBridge(const std::string& tracking_frame,
       lookup_transform_timeout_sec_(lookup_transform_timeout_sec),
       buffer_(buffer) {}
 
-// note: LookupToTracking 查找从tracking_frame_到frame_id的坐标变换
-// imu_link(tracking_frame_) 在 base_link(frame_id) 上方 0.1m处
-// 那这里返回的坐标变换的z是 -0.1
 std::unique_ptr<::cartographer::transform::Rigid3d> TfBridge::LookupToTracking(
     const ::cartographer::common::Time time,
     const std::string& frame_id) const {

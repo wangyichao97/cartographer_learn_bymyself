@@ -62,8 +62,6 @@ TEST_F(ImuTrackerTest, IntegrateYawRotation) {
   AdvanceImu();
   Eigen::Quaterniond expected_orientation(Eigen::AngleAxisd(
       kDuration * angular_velocity_.norm(), angular_velocity_.normalized()));
-
-  // 差值小于kPrecision
   EXPECT_NEAR(0.,
               imu_tracker_->orientation().angularDistance(expected_orientation),
               kPrecision);

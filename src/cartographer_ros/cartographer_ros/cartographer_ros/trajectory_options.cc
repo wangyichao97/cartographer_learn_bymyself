@@ -38,12 +38,6 @@ void CheckTrajectoryOptions(const TrajectoryOptions& options) {
 
 }  // namespace
 
-/**
- * @brief 读取lua文件内容, 将lua文件的内容赋值给TrajectoryOptions
- * 
- * @param[in] lua_parameter_dictionary lua字典
- * @return TrajectoryOptions 
- */
 TrajectoryOptions CreateTrajectoryOptions(
     ::cartographer::common::LuaParameterDictionary* const
         lua_parameter_dictionary) {
@@ -82,6 +76,12 @@ TrajectoryOptions CreateTrajectoryOptions(
       lua_parameter_dictionary->GetDouble("imu_sampling_ratio");
   options.landmarks_sampling_ratio =
       lua_parameter_dictionary->GetDouble("landmarks_sampling_ratio");
+  if (lua_parameter_dictionary->HasKey("ignore_out_of_order")) {
+    options.ignore_out_of_order_messages =
+        lua_parameter_dictionary->GetBool("ignore_out_of_order");
+  } else {
+    options.ignore_out_of_order_messages = false;
+  }
   CheckTrajectoryOptions(options);
   return options;
 }
