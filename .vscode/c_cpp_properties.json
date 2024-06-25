@@ -1,22 +1,41 @@
 {
-    "configurations": [
-        {
-            "browse": {
-                "databaseFilename": "${default}",
-                "limitSymbolsToIncludedHeaders": false
-            },
-            "includePath": [
-                "/opt/ros/noetic/include/**",
-                "/home/ubuntu/catkin_ws/src/helloWord/include/**",
-                "/usr/include/**",
-                "/opt/ros/noetic/include"
-            ],
-            "name": "ROS",
-            "intelliSenseMode": "gcc-x64",
-            "compilerPath": "/usr/bin/gcc",
-            "cStandard": "gnu11",
-            "cppStandard": "c++14"
-        }
-    ],
-    "version": 4
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/ubuntu/learn/cartographer_learn_bymyself/devel_isolated/cartographer_ros_msgs/include/**",
+        "/home/ubuntu/learn/cartographer_learn_bymyself/devel_isolated/cartographer/include/**",
+        "/home/ubuntu/projects/ldslam_driver/devel/include/**",
+        "/home/ubuntu/projects/ldslam_base/devel/include/**",
+        "/opt/ros/melodic/include/**",
+        "/opt/ldslam/ldslam-driver/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/hins_he_driver/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/imls_matcher/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/ldrobot_base_core/include/**",
+        "/home/ubuntu/projects/ldslam_base/src/ldrobot_controller/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/ldrobot_driver_laser/include/**",
+        "/home/ubuntu/projects/ldslam_localization/src/ldrobot_navigation_init_pose/include/**",
+        "/home/ubuntu/projects/ldslam_localization/src/ldrobot_navigation_localizer/include/**",
+        "/home/ubuntu/projects/ldslam_localization/src/ldrobot_navigation_map_server/include/**",
+        "/home/ubuntu/projects/ldslam_localization/src/ldrobot_reflector_localization/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/ldrobot_prepro_scan/include/**",
+        "/home/ubuntu/projects/ldslam_reflector_ekf/src/ldrobot_reflector_ekf/include/**",
+        "/home/ubuntu/projects/ldslam/src/myslam/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/sdkeli_ls_udp/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/3rd/serial/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/serial_bridge/include/**",
+        "/home/ubuntu/projects/ldslam_driver/src/vanjee_lidar/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
 }

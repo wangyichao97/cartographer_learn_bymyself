@@ -66,19 +66,24 @@ class Node {
   void HandleSubmapList(const cartographer_ros_msgs::SubmapList::ConstPtr& msg);
   void DrawAndPublish(const ::ros::WallTimerEvent& timer_event);
 
-  ::ros::NodeHandle node_handle_;
-  const double resolution_;
+  ::ros::NodeHandle node_handle_; // 节点句柄
+  const double resolution_; // 栅格地图的分辨率
 
-  absl::Mutex mutex_;
+  absl::Mutex mutex_; // 互斥锁
+
+  /* GUARDED_BY()宏用于指示某个数据成员受到指定互斥锁的保护，确保在访问该数据成员时需要持有相应的锁 */
   ::ros::ServiceClient client_ GUARDED_BY(mutex_);
   ::ros::Subscriber submap_list_subscriber_ GUARDED_BY(mutex_);
   ::ros::Publisher occupancy_grid_publisher_ GUARDED_BY(mutex_);
-  std::map<SubmapId, SubmapSlice> submap_slices_ GUARDED_BY(mutex_);
-  ::ros::WallTimer occupancy_grid_publisher_timer_;
+  std::map<SubmapId, SubmapSlice> submap_slices_ GUARDED_BY(mutex_);  // 存储子图切片的映射
+  ::ros::WallTimer occupancy_grid_publisher_timer_; // 用于定时发布占用栅格地图的定时器
   std::string last_frame_id_;
   ros::Time last_timestamp_;
 };
 
+/**
+ * 初始化 Node 类
+*/
 Node::Node(const double resolution, const double publish_period_sec)
     : resolution_(resolution),
       client_(node_handle_.serviceClient<::cartographer_ros_msgs::SubmapQuery>(
@@ -103,11 +108,15 @@ void Node::HandleSubmapList(
   absl::MutexLock locker(&mutex_);
 
   // We do not do any work if nobody listens.
+  /**
+   * @brief 如果没有任何订阅者订阅占用栅格地图的消息，则不进行任何处理
+   */
   if (occupancy_grid_publisher_.getNumSubscribers() == 0) {
     return;
   }
 
   // Keep track of submap IDs that don't appear in the message anymore.
+  /*初始化一个集合 submap_ids_to_delete，并将所有当前的子图ID添加到集合中，用于跟踪那些不再出现在新消息中的子图ID*/
   std::set<SubmapId> submap_ids_to_delete;
   for (const auto& pair : submap_slices_) {
     submap_ids_to_delete.insert(pair.first);
@@ -115,7 +124,9 @@ void Node::HandleSubmapList(
 
   for (const auto& submap_msg : msg->submap) {
     const SubmapId id{submap_msg.trajectory_id, submap_msg.submap_index};
+    /*在新的子图列表消息中找到对应的子图ID并从submap_ids_to_delete集合中移除它*/
     submap_ids_to_delete.erase(id);
+    
     if ((submap_msg.is_frozen && !FLAGS_include_frozen_submaps) ||
         (!submap_msg.is_frozen && !FLAGS_include_unfrozen_submaps)) {
       continue;
