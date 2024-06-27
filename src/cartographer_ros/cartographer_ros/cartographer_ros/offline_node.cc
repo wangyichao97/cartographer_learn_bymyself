@@ -101,6 +101,7 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
   cartographer_ros::NodeOptions node_options;
   const std::vector<std::string> configuration_basenames =
       absl::StrSplit(FLAGS_configuration_basenames, ',', absl::SkipEmpty());
+      
   std::vector<TrajectoryOptions> bag_trajectory_options(1);
   std::tie(node_options, bag_trajectory_options.at(0)) =
       LoadOptions(FLAGS_configuration_directory, configuration_basenames.at(0));

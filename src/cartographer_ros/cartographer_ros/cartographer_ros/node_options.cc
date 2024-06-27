@@ -54,7 +54,7 @@ NodeOptions CreateNodeOptions(
   }
   return options;
 }
-
+/*该函数从指定的配置文件中加载配置选项，并返回一个包含 NodeOptions 和 TrajectoryOptions 的元组*/
 std::tuple<NodeOptions, TrajectoryOptions> LoadOptions(
     const std::string& configuration_directory,
     const std::string& configuration_basename) {
