@@ -134,6 +134,7 @@ void Node::HandleSubmapList(
     SubmapSlice& submap_slice = submap_slices_[id];
     submap_slice.pose = ToRigid3d(submap_msg.pose);
     submap_slice.metadata_version = submap_msg.submap_version;
+    /* 如果子图的纹理数据已存在且版本未变化，则跳过进一步处理。*/
     if (submap_slice.surface != nullptr &&
         submap_slice.version == submap_msg.submap_version) {
       continue;
@@ -150,6 +151,7 @@ void Node::HandleSubmapList(
     // We use the first texture only. By convention this is the highest
     // resolution texture and that is the one we want to use to construct the
     // map for ROS.
+    /* 从获取的子图纹理数据中提取第一个纹理，并使用该纹理的数据更新 submap_slice 对象的相关成员变量*/
     const auto fetched_texture = fetched_textures->textures.begin();
     submap_slice.width = fetched_texture->width;
     submap_slice.height = fetched_texture->height;

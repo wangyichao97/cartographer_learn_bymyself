@@ -26,23 +26,23 @@
 namespace cartographer_ros {
 
 struct TrajectoryOptions {
-  ::cartographer::mapping::proto::TrajectoryBuilderOptions
-      trajectory_builder_options;
-  std::string tracking_frame;
-  std::string published_frame;
-  std::string odom_frame;
-  bool provide_odom_frame;
-  bool use_odometry;
-  bool use_nav_sat;
-  bool use_landmarks;
-  bool publish_frame_projected_to_2d;
-  bool ignore_out_of_order_messages;
-  int num_laser_scans;
+  ::cartographer::mapping::proto::TrajectoryBuilderOptions  
+      trajectory_builder_options;     //存储轨迹构建器的具体配置选项
+  std::string tracking_frame; //轨迹帧，一般是IMU
+  std::string published_frame;  //发布结果的坐标帧
+  std::string odom_frame;       //
+  bool provide_odom_frame;      //是否提供odom帧
+  bool use_odometry;            //是否使用里程计数据
+  bool use_nav_sat;             //是否使用导航卫星数据
+  bool use_landmarks;           //是否使用landmark数据
+  bool publish_frame_projected_to_2d; 
+  bool ignore_out_of_order_messages;  //是否忽略无序的消息
+  int num_laser_scans;          
   int num_multi_echo_laser_scans;
-  int num_subdivisions_per_laser_scan;
+  int num_subdivisions_per_laser_scan;  //每次激光扫描的子分区数量
   int num_point_clouds;
-  double rangefinder_sampling_ratio;
-  double odometry_sampling_ratio;
+  double rangefinder_sampling_ratio;    //测距仪数据的频率
+  double odometry_sampling_ratio;       //里程计数据的采样比例
   double fixed_frame_pose_sampling_ratio;
   double imu_sampling_ratio;
   double landmarks_sampling_ratio;

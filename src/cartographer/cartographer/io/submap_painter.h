@@ -44,18 +44,18 @@ struct SubmapSlice {
       : surface(::cartographer::io::MakeUniqueCairoSurfacePtr(nullptr)) {}
 
   // Texture data.
-  int width;
-  int height;
-  int version;
-  double resolution;
-  ::cartographer::transform::Rigid3d slice_pose;
+  int width;      //submap宽度
+  int height;     //submap高度
+  int version;    //版本
+  double resolution;  //分辨率
+  ::cartographer::transform::Rigid3d slice_pose;    //子图位姿
   ::cartographer::io::UniqueCairoSurfacePtr surface;
   // Pixel data used by 'surface'. Must outlive 'surface'.
   std::vector<uint32_t> cairo_data;
 
   // Metadata.
-  ::cartographer::transform::Rigid3d pose;
-  int metadata_version = -1;
+  ::cartographer::transform::Rigid3d pose; //子图在三维空间中的位姿，通常包括平移和旋转信息
+  int metadata_version = -1;  //元数据版本号
 };
 
 struct SubmapTexture {

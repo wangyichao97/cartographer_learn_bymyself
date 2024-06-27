@@ -94,8 +94,10 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
       << "-configuration_basenames is missing.";
   CHECK(!(FLAGS_bag_filenames.empty() && FLAGS_load_state_filename.empty()))
       << "-bag_filenames and -load_state_filename cannot both be unspecified.";
+  /*从命令行参数中获取多个 bag 文件的文件名，并将这些文件名存储在bag_filenames向量中*/
   const std::vector<std::string> bag_filenames =
       absl::StrSplit(FLAGS_bag_filenames, ',', absl::SkipEmpty());
+
   cartographer_ros::NodeOptions node_options;
   const std::vector<std::string> configuration_basenames =
       absl::StrSplit(FLAGS_configuration_basenames, ',', absl::SkipEmpty());
