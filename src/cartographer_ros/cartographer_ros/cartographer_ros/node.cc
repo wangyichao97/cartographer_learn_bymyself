@@ -94,13 +94,18 @@ Node::Node(
     const NodeOptions& node_options,
     std::unique_ptr<cartographer::mapping::MapBuilderInterface> map_builder,
     tf2_ros::Buffer* const tf_buffer, const bool collect_metrics)
-    : node_options_(node_options),
-      map_builder_bridge_(node_options_, std::move(map_builder), tf_buffer) {
+    : node_options_(node_options), map_builder_bridge_(node_options_, std::move(map_builder), tf_buffer) 
+{
   absl::MutexLock lock(&mutex_);
-  if (collect_metrics) {
+  // 如果收集运行时度量指标
+  if (collect_metrics) 
+  {
     metrics_registry_ = absl::make_unique<metrics::FamilyFactory>();
+    /* 用于注册所有与 Cartographer 度量指标相关的组件 */
     carto::metrics::RegisterAllMetrics(metrics_registry_.get());
   }
+
+/* 创建一系列发布者 */
 
   submap_list_publisher_ =
       node_handle_.advertise<::cartographer_ros_msgs::SubmapList>(
@@ -114,11 +119,19 @@ Node::Node(
   constraint_list_publisher_ =
       node_handle_.advertise<::visualization_msgs::MarkerArray>(
           kConstraintListTopic, kLatestOnlyPublisherQueueSize);
+
   if (node_options_.publish_tracked_pose) {
     tracked_pose_publisher_ =
         node_handle_.advertise<::geometry_msgs::PoseStamped>(
             kTrackedPoseTopic, kLatestOnlyPublisherQueueSize);
   }
+
+  scan_matched_point_cloud_publisher_ =
+      node_handle_.advertise<sensor_msgs::PointCloud2>(
+          kScanMatchedPointCloudTopic, kLatestOnlyPublisherQueueSize);
+
+  /* 创建了多个 ROS 服务服务器，用于处理不同的服务请求。每个服务服务器都关联到 Node 类的一个成员函数 */
+
   service_servers_.push_back(node_handle_.advertiseService(
       kSubmapQueryServiceName, &Node::HandleSubmapQuery, this));
   service_servers_.push_back(node_handle_.advertiseService(
@@ -134,13 +147,12 @@ Node::Node(
   service_servers_.push_back(node_handle_.advertiseService(
       kReadMetricsServiceName, &Node::HandleReadMetrics, this));
 
-  scan_matched_point_cloud_publisher_ =
-      node_handle_.advertise<sensor_msgs::PointCloud2>(
-          kScanMatchedPointCloudTopic, kLatestOnlyPublisherQueueSize);
-
+  /* 创建一系列定时器，并将其添加到 wall_timers_ 向量中用于定时发布：*/
+  
   wall_timers_.push_back(node_handle_.createWallTimer(
       ::ros::WallDuration(node_options_.submap_publish_period_sec),
       &Node::PublishSubmapList, this));
+
   if (node_options_.pose_publish_period_sec > 0) {
     publish_local_trajectory_data_timer_ = node_handle_.createTimer(
         ::ros::Duration(node_options_.pose_publish_period_sec),

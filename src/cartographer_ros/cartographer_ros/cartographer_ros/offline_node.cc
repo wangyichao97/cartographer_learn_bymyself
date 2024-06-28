@@ -106,16 +106,22 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
   std::tie(node_options, bag_trajectory_options.at(0)) =
       LoadOptions(FLAGS_configuration_directory, configuration_basenames.at(0));
 
-  for (size_t bag_index = 1; bag_index < bag_filenames.size(); ++bag_index) {
+  for (size_t bag_index = 1; bag_index < bag_filenames.size(); ++bag_index) 
+  {
     TrajectoryOptions current_trajectory_options;
-    if (bag_index < configuration_basenames.size()) {
+    if (bag_index < configuration_basenames.size()) 
+    {
       std::tie(std::ignore, current_trajectory_options) = LoadOptions(
           FLAGS_configuration_directory, configuration_basenames.at(bag_index));
-    } else {
+    } else 
+    {
+      // 如果没有对应的配置文件就用第一个作为默认配置
       current_trajectory_options = bag_trajectory_options.at(0);
     }
     bag_trajectory_options.push_back(current_trajectory_options);
   }
+
+  // 检查是不是每个bag都有对应的配置文件
   if (bag_filenames.size() > 0) {
     CHECK_EQ(bag_trajectory_options.size(), bag_filenames.size());
   }
@@ -133,16 +139,19 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
   tf2_ros::Buffer tf_buffer;
 
   std::vector<geometry_msgs::TransformStamped> urdf_transforms;
+
   const std::vector<std::string> urdf_filenames =
       absl::StrSplit(FLAGS_urdf_filenames, ',', absl::SkipEmpty());
-  for (const auto& urdf_filename : urdf_filenames) {
-    const auto current_urdf_transforms =
-        ReadStaticTransformsFromUrdf(urdf_filename, &tf_buffer);
+  /* 将查询的静态urdf插入到urdf_filenames中 */
+  for (const auto& urdf_filename : urdf_filenames) 
+  {
+    const auto current_urdf_transforms = ReadStaticTransformsFromUrdf(urdf_filename, &tf_buffer);
     urdf_transforms.insert(urdf_transforms.end(),
                            current_urdf_transforms.begin(),
                            current_urdf_transforms.end());
   }
 
+  /* 配置tf2_ros::Buffer对象使用一个专用线程来处理变换数据更新 */
   tf_buffer.setUsingDedicatedThread(true);
 
   Node node(node_options, std::move(map_builder), &tf_buffer,

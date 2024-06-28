@@ -175,12 +175,16 @@ class Node {
       const std::set<
           cartographer::mapping::PoseGraphInterface::TrajectoryState>&
           valid_states);
+  // 节点配置选项
   const NodeOptions node_options_;
-
+  // 用于广播TF变换的对象
   tf2_ros::TransformBroadcaster tf_broadcaster_;
 
+  // 互斥锁，用于保护共享数据
   absl::Mutex mutex_;
+  // 测量注册器
   std::unique_ptr<cartographer_ros::metrics::FamilyFactory> metrics_registry_;
+  // 地图构建桥接器
   MapBuilderBridge map_builder_bridge_ GUARDED_BY(mutex_);
 
   ::ros::NodeHandle node_handle_;

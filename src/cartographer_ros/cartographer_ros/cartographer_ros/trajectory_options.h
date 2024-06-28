@@ -28,10 +28,10 @@ namespace cartographer_ros {
 struct TrajectoryOptions {
   ::cartographer::mapping::proto::TrajectoryBuilderOptions  
       trajectory_builder_options;     //存储轨迹构建器的具体配置选项
-  std::string tracking_frame; //轨迹帧，一般是IMU
-  std::string published_frame;  //发布结果的坐标帧
+  std::string tracking_frame; //轨迹坐标系，一般是IMU
+  std::string published_frame;  //发布结果的坐标系
   std::string odom_frame;       //
-  bool provide_odom_frame;      //是否提供odom帧
+  bool provide_odom_frame;      //是否提供odom坐标系
   bool use_odometry;            //是否使用里程计数据
   bool use_nav_sat;             //是否使用导航卫星数据
   bool use_landmarks;           //是否使用landmark数据

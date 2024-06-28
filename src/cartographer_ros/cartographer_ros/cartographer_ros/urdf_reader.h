@@ -23,7 +23,14 @@
 #include "tf2_ros/buffer.h"
 
 namespace cartographer_ros {
-
+    
+/**
+ * @brief 用于从URDF文件中读取静态变换并将其存储在tf2_ros::Buffer中，同时返回这些变换。
+ * 
+ * @param urdf_filename 
+ * @param tf_buffer 
+ * @return std::vector<geometry_msgs::TransformStamped> 
+ */
 std::vector<geometry_msgs::TransformStamped> ReadStaticTransformsFromUrdf(
     const std::string& urdf_filename, tf2_ros::Buffer* tf_buffer);
 
