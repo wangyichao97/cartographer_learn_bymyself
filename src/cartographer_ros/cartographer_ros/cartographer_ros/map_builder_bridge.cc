@@ -114,6 +114,7 @@ void MapBuilderBridge::LoadState(const std::string& state_filename,
       << "The file containing the state to be loaded must be a "
          ".pbstream file.";
   LOG(INFO) << "Loading saved state '" << state_filename << "'...";
+  /* 用于读取 Protocol Buffer 流的类，通常用于处理 .pbstream 文件 */
   cartographer::io::ProtoStreamReader stream(state_filename);
   map_builder_->LoadState(&stream, load_frozen_state);
 }

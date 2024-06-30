@@ -47,16 +47,19 @@ mapping::proto::PoseGraph DeserializePoseGraphFromFile(
 ProtoStreamDeserializer::ProtoStreamDeserializer(
     ProtoStreamReaderInterface* const reader)
     : reader_(reader), header_(ReadHeaderOrDie(reader)) {
+  /*检查序列化格式版本是否被支持*/
   CHECK(IsVersionSupported(header_)) << "Unsupported serialization format \""
                                      << header_.format_version() << "\"";
-
+  
+  /* 读取 PoseGraph */
   CHECK(ReadNextSerializedData(&pose_graph_))
       << "Serialized stream misses PoseGraph.";
   CHECK(pose_graph_.has_pose_graph())
       << "Serialized stream order corrupt. Expecting `PoseGraph` after "
          "`SerializationHeader`, but got field tag "
       << pose_graph_.data_case();
-
+  
+  /* 读取 AllTrajectoryBuilderOptions */
   CHECK(ReadNextSerializedData(&all_trajectory_builder_options_))
       << "Serialized stream misses `AllTrajectoryBuilderOptions`.";
   CHECK(all_trajectory_builder_options_.has_all_trajectory_builder_options())
@@ -64,7 +67,8 @@ ProtoStreamDeserializer::ProtoStreamDeserializer(
          "`AllTrajectoryBuilderOptions` after "
          "PoseGraph, got field tag "
       << all_trajectory_builder_options_.data_case();
-
+  
+  /* 检查 PoseGraph 中的轨迹数量是否与 AllTrajectoryBuilderOptions 中的传感器 ID 数量一致 */
   CHECK_EQ(pose_graph_.pose_graph().trajectory_size(),
            all_trajectory_builder_options_.all_trajectory_builder_options()
                .options_with_sensor_ids_size());

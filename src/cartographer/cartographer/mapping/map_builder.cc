@@ -165,11 +165,16 @@ int MapBuilder::AddTrajectoryBuilder(
   return trajectory_id;
 }
 
+// 添加一个新的轨迹
 int MapBuilder::AddTrajectoryForDeserialization(
     const proto::TrajectoryBuilderOptionsWithSensorIds&
-        options_with_sensor_ids_proto) {
+        options_with_sensor_ids_proto) 
+{
+  // 计算新的轨迹ID
   const int trajectory_id = trajectory_builders_.size();
+  // 添加新的轨迹构建器
   trajectory_builders_.emplace_back();
+  // 保存轨迹构建器选项：
   all_trajectory_builder_options_.push_back(options_with_sensor_ids_proto);
   CHECK_EQ(trajectory_builders_.size(), all_trajectory_builder_options_.size());
   return trajectory_id;
@@ -219,15 +224,21 @@ std::map<int, int> MapBuilder::LoadState(
 
   // Create a copy of the pose_graph_proto, such that we can re-write the
   // trajectory ids.
+  /*获取 PoseGraph 和 AllTrajectoryBuilderOptions 数据*/
   proto::PoseGraph pose_graph_proto = deserializer.pose_graph();
   const auto& all_builder_options_proto =
       deserializer.all_trajectory_builder_options();
 
+  /* 用于存储旧的轨迹 ID 和新的轨迹 ID 的映射关系 */
   std::map<int, int> trajectory_remapping;
-  for (int i = 0; i < pose_graph_proto.trajectory_size(); ++i) {
+  for (int i = 0; i < pose_graph_proto.trajectory_size(); ++i) 
+  {
+    /* 获得可被修改的Trajectory对象的引用*/
     auto& trajectory_proto = *pose_graph_proto.mutable_trajectory(i);
+    /* 获取对应的 options_with_sensor_ids 配置 */
     const auto& options_with_sensor_ids_proto =
         all_builder_options_proto.options_with_sensor_ids(i);
+    /* 用该配置添加轨迹 */
     const int new_trajectory_id =
         AddTrajectoryForDeserialization(options_with_sensor_ids_proto);
     CHECK(trajectory_remapping
@@ -235,30 +246,62 @@ std::map<int, int> MapBuilder::LoadState(
               .second)
         << "Duplicate trajectory ID: " << trajectory_proto.trajectory_id();
     trajectory_proto.set_trajectory_id(new_trajectory_id);
-    if (load_frozen_state) {
+    /* 需要冻结轨迹 */
+    if (load_frozen_state) 
+    {
       pose_graph_->FreezeTrajectory(new_trajectory_id);
     }
   }
 
   // Apply the calculated remapping to constraints in the pose graph proto.
-  for (auto& constraint_proto : *pose_graph_proto.mutable_constraint()) {
+  /* 它更新了每个约束中的子图ID和节点ID，使其使用新的轨迹ID */
+  for (auto& constraint_proto : *pose_graph_proto.mutable_constraint()) 
+  {
+    /**
+     * constraint_proto.submap_id().trajectory_id() 返回子图ID中的旧的轨迹ID
+     * rajectory_remapping.at(旧的轨迹ID) 从 trajectory_remapping 映射表中查找对应的新的轨迹ID。
+     * set_trajectory_id(新的轨迹ID) 将新的轨迹ID设置到子图ID中
+    */
     constraint_proto.mutable_submap_id()->set_trajectory_id(
         trajectory_remapping.at(constraint_proto.submap_id().trajectory_id()));
+    
+    /*更新节点ID的轨迹ID，跟上面一样*/
     constraint_proto.mutable_node_id()->set_trajectory_id(
         trajectory_remapping.at(constraint_proto.node_id().trajectory_id()));
   }
 
+  //
+  /**
+   * @brief 从 proto::PoseGraph 对象中提取子图（submap）信息，并将其插入到 子图位姿submap_poses 中
+   * @param<SubmapId, transform::Rigid3d> 用于存储子图ID和对应的位姿（transform::Rigid3d）
+   * SubmapId：子图ID，包含轨迹ID和子图索引
+   * transform::Rigid3d：表示刚体变换的类，包含位姿信息（位置和旋转）。
+   * proto::PoseGraph 对象，包含轨迹和约束信息。
+   * proto::Trajectory：PoseGraph 中的轨迹信息。
+   * proto::Trajectory::Submap：每个轨迹中的子图信息
+   */
   MapById<SubmapId, transform::Rigid3d> submap_poses;
-  for (const proto::Trajectory& trajectory_proto :
-       pose_graph_proto.trajectory()) {
-    for (const proto::Trajectory::Submap& submap_proto :
-         trajectory_proto.submap()) {
-      submap_poses.Insert(SubmapId{trajectory_proto.trajectory_id(),
-                                   submap_proto.submap_index()},
+  // 遍历轨迹
+  for (const proto::Trajectory& trajectory_proto :pose_graph_proto.trajectory()) 
+  {
+    // 遍历子图
+    for (const proto::Trajectory::Submap& submap_proto : trajectory_proto.submap()) 
+    {
+      /**
+       * @brief 插入子图信息到 submap_poses
+       * 使用轨迹ID和子图索引创建一个 SubmapId 对象
+       * 使用 transform::ToRigid3 方法将 submap_proto.pose() 转换为 transform::Rigid3d 对象
+       * submap_poses.Insert 方法将子图ID和对应的位姿存储到 submap_poses 数据结构中。
+       */
+      submap_poses.Insert(SubmapId{trajectory_proto.trajectory_id(),submap_proto.submap_index()},
                           transform::ToRigid3(submap_proto.pose()));
     }
   }
 
+  /**
+   * @brief 遍历轨迹和节点,将节点的位姿信息插入到 node_poses ,方法和子图位姿差不多
+   * 
+   */
   MapById<NodeId, transform::Rigid3d> node_poses;
   for (const proto::Trajectory& trajectory_proto :
        pose_graph_proto.trajectory()) {

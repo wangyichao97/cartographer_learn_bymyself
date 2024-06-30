@@ -154,8 +154,11 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
   /* 配置tf2_ros::Buffer对象使用一个专用线程来处理变换数据更新 */
   tf_buffer.setUsingDedicatedThread(true);
 
+  /* 创建node节点 */
   Node node(node_options, std::move(map_builder), &tf_buffer,
             FLAGS_collect_metrics);
+
+  /* 是否调用 LoadState 方法加载状态文件 */
   if (!FLAGS_load_state_filename.empty()) {
     node.LoadState(FLAGS_load_state_filename, FLAGS_load_frozen_state);
   }
