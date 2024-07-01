@@ -28,6 +28,7 @@ namespace common {
 // uniformly distributed fraction of the data.
 class FixedRatioSampler {
  public:
+  // 显式构造函数，接受一个采样比例 ratio。这个比例表示希望采样的比例，例如0.1表示每10个数据中采样1个
   explicit FixedRatioSampler(double ratio);
   ~FixedRatioSampler();
 
@@ -43,9 +44,11 @@ class FixedRatioSampler {
  private:
   // Sampling occurs if the proportion of samples to pulses drops below this
   // number.
+  // 采样比例
   const double ratio_;
-
+  // 脉冲计数器,记录调用 Pulse 方法的总次数，即处理的数据点数量
   int64 num_pulses_ = 0;
+  // 样本计数器, 记录已经采样的数据点数量。
   int64 num_samples_ = 0;
 };
 

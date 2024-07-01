@@ -632,19 +632,25 @@ void Node::StartTrajectoryWithDefaultTopics(const TrajectoryOptions& options) {
   AddTrajectory(options);
 }
 
-std::vector<
-    std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>>
+std::vector<std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>>
 Node::ComputeDefaultSensorIdsForMultipleBags(
-    const std::vector<TrajectoryOptions>& bags_options) const {
+    const std::vector<TrajectoryOptions>& bags_options) const 
+{
   using SensorId = cartographer::mapping::TrajectoryBuilderInterface::SensorId;
+  // 用于存储每个bag文件的传感器ID集合
   std::vector<std::set<SensorId>> bags_sensor_ids;
-  for (size_t i = 0; i < bags_options.size(); ++i) {
+  for (size_t i = 0; i < bags_options.size(); ++i) 
+  {
     std::string prefix;
-    if (bags_options.size() > 1) {
+    // 如果有多个bag文件，则为每个bag文件的传感器ID添加前缀。
+    if (bags_options.size() > 1) 
+    {
       prefix = "bag_" + std::to_string(i + 1) + "_";
     }
     std::set<SensorId> unique_sensor_ids;
-    for (const auto& sensor_id : ComputeExpectedSensorIds(bags_options.at(i))) {
+    // 计算并插入唯一传感器ID
+    for (const auto& sensor_id : ComputeExpectedSensorIds(bags_options.at(i))) 
+    {
       unique_sensor_ids.insert(SensorId{sensor_id.type, prefix + sensor_id.id});
     }
     bags_sensor_ids.push_back(unique_sensor_ids);
@@ -830,18 +836,23 @@ void Node::HandleImuMessage(const int trajectory_id,
 
 void Node::HandleLaserScanMessage(const int trajectory_id,
                                   const std::string& sensor_id,
-                                  const sensor_msgs::LaserScan::ConstPtr& msg) {
+                                  const sensor_msgs::LaserScan::ConstPtr& msg) 
+{
   absl::MutexLock lock(&mutex_);
-  if (!sensor_samplers_.at(trajectory_id).rangefinder_sampler.Pulse()) {
+  // 调用采样器的 Pulse 方法决定是否处理当前消息, 避免处理过多的冗余数据。
+  if (!sensor_samplers_.at(trajectory_id).rangefinder_sampler.Pulse()) 
+  {
     return;
   }
+  // 调用传感器桥接器的 HandleLaserScanMessage 方法，处理激光扫描消息
   map_builder_bridge_.sensor_bridge(trajectory_id)
       ->HandleLaserScanMessage(sensor_id, msg);
 }
 
 void Node::HandleMultiEchoLaserScanMessage(
     const int trajectory_id, const std::string& sensor_id,
-    const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg) {
+    const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg) 
+{
   absl::MutexLock lock(&mutex_);
   if (!sensor_samplers_.at(trajectory_id).rangefinder_sampler.Pulse()) {
     return;
@@ -852,7 +863,8 @@ void Node::HandleMultiEchoLaserScanMessage(
 
 void Node::HandlePointCloud2Message(
     const int trajectory_id, const std::string& sensor_id,
-    const sensor_msgs::PointCloud2::ConstPtr& msg) {
+    const sensor_msgs::PointCloud2::ConstPtr& msg) 
+  {
   absl::MutexLock lock(&mutex_);
   if (!sensor_samplers_.at(trajectory_id).rangefinder_sampler.Pulse()) {
     return;

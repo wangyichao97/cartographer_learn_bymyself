@@ -182,8 +182,10 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
   }
 }
 
+// 将激光扫描消息转换为带有强度信息的点云，并调用另一个处理方法 HandleLaserScan
 void SensorBridge::HandleLaserScanMessage(
-    const std::string& sensor_id, const sensor_msgs::LaserScan::ConstPtr& msg) {
+    const std::string& sensor_id, const sensor_msgs::LaserScan::ConstPtr& msg) 
+{
   carto::sensor::PointCloudWithIntensities point_cloud;
   carto::common::Time time;
   std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
@@ -195,13 +197,15 @@ void SensorBridge::HandleMultiEchoLaserScanMessage(
     const sensor_msgs::MultiEchoLaserScan::ConstPtr& msg) {
   carto::sensor::PointCloudWithIntensities point_cloud;
   carto::common::Time time;
+  // std::tie：解构赋值，将转换结果赋值给 point_cloud 和 time
   std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
   HandleLaserScan(sensor_id, time, msg->header.frame_id, point_cloud);
 }
 
 void SensorBridge::HandlePointCloud2Message(
     const std::string& sensor_id,
-    const sensor_msgs::PointCloud2::ConstPtr& msg) {
+    const sensor_msgs::PointCloud2::ConstPtr& msg) 
+{
   carto::sensor::PointCloudWithIntensities point_cloud;
   carto::common::Time time;
   std::tie(point_cloud, time) = ToPointCloudWithIntensities(*msg);
@@ -210,30 +214,43 @@ void SensorBridge::HandlePointCloud2Message(
 
 const TfBridge& SensorBridge::tf_bridge() const { return tf_bridge_; }
 
+// 需要将一帧激光扫描数据进行分段，以便更细粒度地处理每个分段的数据
 void SensorBridge::HandleLaserScan(
     const std::string& sensor_id, const carto::common::Time time,
     const std::string& frame_id,
-    const carto::sensor::PointCloudWithIntensities& points) {
+    const carto::sensor::PointCloudWithIntensities& points) 
+{
+  // 检查点云是否为空
   if (points.points.empty()) {
     return;
   }
+  // 检查最后一个点的时间是否小于等于0
   CHECK_LE(points.points.back().time, 0.f);
   // TODO(gaschler): Use per-point time instead of subdivisions.
+  // 分段处理激光扫描数据
   for (int i = 0; i != num_subdivisions_per_laser_scan_; ++i) {
     const size_t start_index =
         points.points.size() * i / num_subdivisions_per_laser_scan_;
     const size_t end_index =
         points.points.size() * (i + 1) / num_subdivisions_per_laser_scan_;
+    // 表示当前分段的点云数据。
     carto::sensor::TimedPointCloud subdivision(
         points.points.begin() + start_index, points.points.begin() + end_index);
+    // 检查分段是否为空
     if (start_index == end_index) {
       continue;
     }
+    // 当前分段的最后一个点的时间
     const double time_to_subdivision_end = subdivision.back().time;
     // `subdivision_time` is the end of the measurement so sensor::Collator will
     // send all other sensor data first.
+    // 表示当前分段的结束时间
     const carto::common::Time subdivision_time =
         time + carto::common::FromSeconds(time_to_subdivision_end);
+
+    /**
+     * @brief 检查当前传感器的上一个分段时间是否在当前分段时间之前，如果不是，则忽略当前分段。
+     */
     auto it = sensor_to_previous_subdivision_time_.find(sensor_id);
     if (it != sensor_to_previous_subdivision_time_.end() &&
         it->second >= subdivision_time) {
@@ -243,24 +260,33 @@ void SensorBridge::HandleLaserScan(
                    << subdivision_time;
       continue;
     }
+    // 更新传感器的上一个分段时间为当前分段时间。
     sensor_to_previous_subdivision_time_[sensor_id] = subdivision_time;
+    // 调整每个点的相对时间，使最后一个点的时间为0
     for (auto& point : subdivision) {
       point.time -= time_to_subdivision_end;
     }
+    // 确保分段中的最后一个点的时间确实为0。
     CHECK_EQ(subdivision.back().time, 0.f);
+    
     HandleRangefinder(sensor_id, subdivision_time, frame_id, subdivision);
   }
 }
 
 void SensorBridge::HandleRangefinder(
     const std::string& sensor_id, const carto::common::Time time,
-    const std::string& frame_id, const carto::sensor::TimedPointCloud& ranges) {
+    const std::string& frame_id, const carto::sensor::TimedPointCloud& ranges) 
+{
   if (!ranges.empty()) {
     CHECK_LE(ranges.back().time, 0.f);
   }
+
+  // 查找传感器到跟踪坐标系的变换
   const auto sensor_to_tracking =
       tf_bridge_.LookupToTracking(time, CheckNoLeadingSlash(frame_id));
-  if (sensor_to_tracking != nullptr) {
+  if (sensor_to_tracking != nullptr) 
+  {
+    //忽略重复的消息
     if (IgnoreMessage(sensor_id, time)) {
       LOG(WARNING) << "Ignored Rangefinder message from sensor " << sensor_id
                    << " because sensor time " << time
@@ -268,7 +294,9 @@ void SensorBridge::HandleRangefinder(
                    << latest_sensor_time_[sensor_id];
       return;
     }
+    // 更新最新传感器时间
     latest_sensor_time_[sensor_id] = time;
+    // 添加传感器数据到轨迹构建器
     trajectory_builder_->AddSensorData(
         sensor_id, carto::sensor::TimedPointCloudData{
                        time, sensor_to_tracking->translation().cast<float>(),

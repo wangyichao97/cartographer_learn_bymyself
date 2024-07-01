@@ -313,10 +313,11 @@ std::map<int, int> MapBuilder::LoadState(
   }
 
   // Set global poses of landmarks.
-  for (const auto& landmark : pose_graph_proto.landmark_poses()) {
+  /*从 pose_graph_proto 对象中提取地标（landmarks）的全局位姿，并将这些位姿设置到 pose_graph_ 对象中*/
+  for (const auto& landmark : pose_graph_proto.landmark_poses()) 
+  {
     pose_graph_->SetLandmarkPose(landmark.landmark_id(),
-                                 transform::ToRigid3(landmark.global_pose()),
-                                 true);
+                                 transform::ToRigid3(landmark.global_pose()), true);
   }
 
   if (options_.use_trajectory_builder_3d()) {
@@ -327,9 +328,12 @@ std::map<int, int> MapBuilder::LoadState(
            "Cartographer documentation for details. ";
   }
 
-  SerializedData proto;
-  while (deserializer.ReadNextSerializedData(&proto)) {
-    switch (proto.data_case()) {
+  SerializedData proto; // 用于存储从数据流中读取的数据
+  while (deserializer.ReadNextSerializedData(&proto)) 
+  {
+    switch (proto.data_case()) 
+    {
+      /* 这通常表明数据流可能损坏。程序记录错误日志并跳过这些情况。*/
       case SerializedData::kPoseGraph:
         LOG(ERROR) << "Found multiple serialized `PoseGraph`. Serialized "
                       "stream likely corrupt!.";
@@ -339,46 +343,86 @@ std::map<int, int> MapBuilder::LoadState(
                       "`AllTrajectoryBuilderOptions`. Serialized stream likely "
                       "corrupt!.";
         break;
-      case SerializedData::kSubmap: {
+
+
+      case SerializedData::kSubmap: 
+      {
+        /**
+         * @brief 将子图的轨迹ID更新为新的轨迹ID
+         * trajectory_remapping.at(...)：使用 trajectory_remapping 映射表将旧的轨迹ID转换为新的轨迹ID
+         */
         proto.mutable_submap()->mutable_submap_id()->set_trajectory_id(
-            trajectory_remapping.at(
-                proto.submap().submap_id().trajectory_id()));
+            trajectory_remapping.at(proto.submap().submap_id().trajectory_id()));
+
+        /*创建了一个 SubmapId 对象，用于在 submap_poses 表中查找子图位姿*/
         const SubmapId submap_id(proto.submap().submap_id().trajectory_id(),
                                  proto.submap().submap_id().submap_index());
+
+        /*将子图的位姿和序列化数据添加到位姿图中，确保子图在全局地图中的正确位置和姿态*/
         pose_graph_->AddSubmapFromProto(submap_poses.at(submap_id),
                                         proto.submap());
         break;
       }
-      case SerializedData::kNode: {
+
+      /**
+       * @brief 节点的位姿和序列化数据添加到位姿图中，确保节点在全局地图中的正确位置和姿态
+       * 
+       */
+      case SerializedData::kNode: 
+      {
         proto.mutable_node()->mutable_node_id()->set_trajectory_id(
             trajectory_remapping.at(proto.node().node_id().trajectory_id()));
+
         const NodeId node_id(proto.node().node_id().trajectory_id(),
                              proto.node().node_id().node_index());
+
         const transform::Rigid3d& node_pose = node_poses.at(node_id);
         pose_graph_->AddNodeFromProto(node_pose, proto.node());
         break;
       }
-      case SerializedData::kTrajectoryData: {
+      /**
+       * @brief 将存储的轨迹数据恢复到位姿图中
+       * 
+       */
+      case SerializedData::kTrajectoryData: 
+      {
         proto.mutable_trajectory_data()->set_trajectory_id(
             trajectory_remapping.at(proto.trajectory_data().trajectory_id()));
         pose_graph_->SetTrajectoryDataFromProto(proto.trajectory_data());
         break;
       }
-      case SerializedData::kImuData: {
+      /**
+       * @brief 添加 IMU 数据到位姿图
+       * 
+       */
+      case SerializedData::kImuData: 
+      {
+        // 检查是否加载冻结状态
         if (load_frozen_state) break;
         pose_graph_->AddImuData(
             trajectory_remapping.at(proto.imu_data().trajectory_id()),
             sensor::FromProto(proto.imu_data().imu_data()));
         break;
       }
-      case SerializedData::kOdometryData: {
+
+      /**
+       * @brief 添加 Odometry 数据到位姿图
+       * 
+       */
+      case SerializedData::kOdometryData: 
+      {
         if (load_frozen_state) break;
         pose_graph_->AddOdometryData(
             trajectory_remapping.at(proto.odometry_data().trajectory_id()),
             sensor::FromProto(proto.odometry_data().odometry_data()));
         break;
       }
-      case SerializedData::kFixedFramePoseData: {
+      /**
+       * @brief 添加固定帧位姿数据到位姿图
+       * 
+       */
+      case SerializedData::kFixedFramePoseData: 
+      {
         if (load_frozen_state) break;
         pose_graph_->AddFixedFramePoseData(
             trajectory_remapping.at(
@@ -387,7 +431,12 @@ std::map<int, int> MapBuilder::LoadState(
                 proto.fixed_frame_pose_data().fixed_frame_pose_data()));
         break;
       }
-      case SerializedData::kLandmarkData: {
+      /**
+       * @brief 添加地标数据到位姿图
+       * 
+       */
+      case SerializedData::kLandmarkData: 
+      {
         if (load_frozen_state) break;
         pose_graph_->AddLandmarkData(
             trajectory_remapping.at(proto.landmark_data().trajectory_id()),
@@ -400,28 +449,36 @@ std::map<int, int> MapBuilder::LoadState(
     }
   }
 
-  if (load_frozen_state) {
+  if (load_frozen_state) 
+  {
     // Add information about which nodes belong to which submap.
     // This is required, even without constraints.
-    for (const proto::PoseGraph::Constraint& constraint_proto :
-         pose_graph_proto.constraint()) {
-      if (constraint_proto.tag() !=
-          proto::PoseGraph::Constraint::INTRA_SUBMAP) {
+    // 遍历 pose_graph_proto.constraint() 中的所有约束
+    for (const proto::PoseGraph::Constraint& constraint_proto : pose_graph_proto.constraint()) 
+    {
+      //如果约束不是子图内部的约束，则跳过。
+      if (constraint_proto.tag() != proto::PoseGraph::Constraint::INTRA_SUBMAP) 
+      {
         continue;
       }
+      // 添加节点和子图的映射信息
       pose_graph_->AddNodeToSubmap(
           NodeId{constraint_proto.node_id().trajectory_id(),
                  constraint_proto.node_id().node_index()},
           SubmapId{constraint_proto.submap_id().trajectory_id(),
                    constraint_proto.submap_id().submap_index()});
     }
-  } else {
+  } 
+  else 
+  {
     // When loading unfrozen trajectories, 'AddSerializedConstraints' will
     // take care of adding information about which nodes belong to which
     // submap.
+    // 将序列化的约束添加到位姿图中
     pose_graph_->AddSerializedConstraints(
         FromProto(pose_graph_proto.constraint()));
   }
+  // 如果 reader->eof() 返回 false，表示还没有到达文件末尾，CHECK 宏将触发一个错误并终止程序。这确保了所有预期的数据都已被读取。
   CHECK(reader->eof());
   return trajectory_remapping;
 }

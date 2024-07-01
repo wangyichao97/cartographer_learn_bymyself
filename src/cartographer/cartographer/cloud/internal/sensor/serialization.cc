@@ -57,11 +57,21 @@ void CreateAddOdometryDataRequest(
   *proto->mutable_odometry_data() = odometry_data;
 }
 
+/**
+ * @brief Create a Add Range Finder Data Request object
+ * 
+ * @param sensor_id 传感器的唯一标识符
+ * @param trajectory_id 轨迹的唯一标识符
+ * @param client_id 客户端的唯一标识符
+ * @param timed_point_cloud_data 传感器的点云数据，包含时间戳。
+ * @param proto 指向 AddRangefinderDataRequest 对象的指针，用于填充请求数据
+ */
 void CreateAddRangeFinderDataRequest(
     const std::string& sensor_id, int trajectory_id,
     const std::string& client_id,
     const sensor::proto::TimedPointCloudData& timed_point_cloud_data,
-    proto::AddRangefinderDataRequest* proto) {
+    proto::AddRangefinderDataRequest* proto) 
+    {
   CreateSensorMetadata(sensor_id, trajectory_id, client_id,
                        proto->mutable_sensor_metadata());
   *proto->mutable_timed_point_cloud_data() = timed_point_cloud_data;

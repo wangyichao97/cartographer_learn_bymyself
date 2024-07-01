@@ -163,23 +163,32 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
     node.LoadState(FLAGS_load_state_filename, FLAGS_load_frozen_state);
   }
 
+  // 创建一个tf发布器
   ::ros::Publisher tf_publisher =
       node.node_handle()->advertise<tf2_msgs::TFMessage>(
           kTfTopic, kLatestOnlyPublisherQueueSize);
 
+  // 静态变换广播器对象
   ::tf2_ros::StaticTransformBroadcaster static_tf_broadcaster;
 
+  // 创建时钟发布器
   ::ros::Publisher clock_publisher =
       node.node_handle()->advertise<rosgraph_msgs::Clock>(
           kClockTopic, kLatestOnlyPublisherQueueSize);
 
+
+  //发布静态变换
   if (urdf_transforms.size() > 0) {
     static_tf_broadcaster.sendTransform(urdf_transforms);
   }
 
+  // 创建一个单线程（kSingleThreaded）的异步回调处理器并启动
   ros::AsyncSpinner async_spinner(kSingleThreaded);
   async_spinner.start();
+
+  // rosgraph_msgs::Clock clock;
   rosgraph_msgs::Clock clock;
+  // 创建WallTimer 被用来定期发布时钟消息。
   auto clock_republish_timer = node.node_handle()->createWallTimer(
       ::ros::WallDuration(kClockPublishFrequencySec),
       [&clock_publisher, &clock](const ::ros::WallTimerEvent&) {
@@ -187,37 +196,46 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
       },
       false /* oneshot */, false /* autostart */);
 
-  std::vector<
-      std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>>
+  std::vector<std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>>
       bag_expected_sensor_ids;
-  if (configuration_basenames.size() == 1) {
+  if (configuration_basenames.size() == 1) 
+  {
+    // 存储计算得到的的轨迹选项对应的传感器ID集合
     const auto current_bag_expected_sensor_ids =
-        node.ComputeDefaultSensorIdsForMultipleBags(
-            {bag_trajectory_options.front()});
+        node.ComputeDefaultSensorIdsForMultipleBags({bag_trajectory_options.front()});
+
+    // 为所有bag文件设置相同的传感器ID集合
     bag_expected_sensor_ids = {bag_filenames.size(),
                                current_bag_expected_sensor_ids.front()};
-  } else {
+  } 
+  else 
+  {
+    // 计算每个轨迹选项对应的传感器ID集合，并存储在 bag_expected_sensor_ids 中
     bag_expected_sensor_ids =
         node.ComputeDefaultSensorIdsForMultipleBags(bag_trajectory_options);
   }
   CHECK_EQ(bag_expected_sensor_ids.size(), bag_filenames.size());
 
+  // 将每个bag文件中的传感器ID与其对应的主题（topic）关联起来
   std::map<std::pair<int /* bag_index */, std::string>,
            cartographer::mapping::TrajectoryBuilderInterface::SensorId>
       bag_topic_to_sensor_id;
+  // 多路复用器对象，用于处理多个bag文件的播放 
   PlayableBagMultiplexer playable_bag_multiplexer;
-  for (size_t current_bag_index = 0; current_bag_index < bag_filenames.size();
-       ++current_bag_index) {
+  for (size_t current_bag_index = 0; current_bag_index < bag_filenames.size(); ++current_bag_index) 
+  {
     const std::string& bag_filename = bag_filenames.at(current_bag_index);
-    if (!::ros::ok()) {
+    if (!::ros::ok()) 
+    {
       return;
     }
-    for (const auto& expected_sensor_id :
-         bag_expected_sensor_ids.at(current_bag_index)) {
+    for (const auto& expected_sensor_id : bag_expected_sensor_ids.at(current_bag_index)) 
+    {
       const auto bag_resolved_topic = std::make_pair(
           static_cast<int>(current_bag_index),
           node.node_handle()->resolveName(expected_sensor_id.id));
-      if (bag_topic_to_sensor_id.count(bag_resolved_topic) != 0) {
+      if (bag_topic_to_sensor_id.count(bag_resolved_topic) != 0) 
+      {
         LOG(ERROR) << "Sensor " << expected_sensor_id.id << " of bag "
                    << current_bag_index << " resolves to topic "
                    << bag_resolved_topic.second << " which is already used by "
@@ -227,6 +245,7 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
       bag_topic_to_sensor_id[bag_resolved_topic] = expected_sensor_id;
     }
 
+    // 添加 PlayableBag 到多路复用器
     playable_bag_multiplexer.AddPlayableBag(PlayableBag(
         bag_filename, current_bag_index, ros::TIME_MIN, ros::TIME_MAX, kDelay,
         // PlayableBag::FilteringEarlyMessageHandler is used to get an early
@@ -262,15 +281,18 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
         }));
   }
 
+  // 检查bag文件中的话题（topics），并验证每个期望的话题是否在bag文件中存在
   std::set<std::string> bag_topics;
   std::stringstream bag_topics_string;
-  for (const auto& topic : playable_bag_multiplexer.topics()) {
+  for (const auto& topic : playable_bag_multiplexer.topics()) 
+  {
     std::string resolved_topic = node.node_handle()->resolveName(topic, false);
     bag_topics.insert(resolved_topic);
     bag_topics_string << resolved_topic << ",";
   }
   bool print_topics = false;
-  for (const auto& entry : bag_topic_to_sensor_id) {
+  for (const auto& entry : bag_topic_to_sensor_id) 
+  {
     const std::string& resolved_topic = entry.first.second;
     if (bag_topics.count(resolved_topic) == 0) {
       LOG(WARNING) << "Expected resolved topic \"" << resolved_topic
@@ -283,22 +305,31 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
                  << bag_topics_string.str();
   }
 
+  // 将bag文件的索引映射到轨迹ID
   std::unordered_map<int, int> bag_index_to_trajectory_id;
+  // 确定开始时间
   const ros::Time begin_time =
       // If no bags were loaded, we cannot peek the time of first message.
       playable_bag_multiplexer.IsMessageAvailable()
           ? playable_bag_multiplexer.PeekMessageTime()
           : ros::Time();
-  while (playable_bag_multiplexer.IsMessageAvailable()) {
+  
+  while (playable_bag_multiplexer.IsMessageAvailable()) // 检查是否有可用的消息以及ros是否还在运行
+  {
     if (!::ros::ok()) {
       return;
     }
 
+    // 获取下一条消息
     const auto next_msg_tuple = playable_bag_multiplexer.GetNextMessage();
+    // 消息实例
     const rosbag::MessageInstance& msg = std::get<0>(next_msg_tuple);
+    // bag文件的索引
     const int bag_index = std::get<1>(next_msg_tuple);
+    // 指示这是否是bag文件中的最后一条消息。
     const bool is_last_message_in_bag = std::get<2>(next_msg_tuple);
 
+    // 跳过初始的几秒钟
     if (msg.getTime() < (begin_time + ros::Duration(FLAGS_skip_seconds))) {
       continue;
     }
@@ -306,10 +337,15 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
     int trajectory_id;
     // Lazily add trajectories only when the first message arrives in order
     // to avoid blocking the sensor queue.
-    if (bag_index_to_trajectory_id.count(bag_index) == 0) {
+    // 仅在第一条消息到达时添加轨迹，以避免阻塞传感器队列。
+    // 如果当前bag文件的索引不在映射表中，则添加新的轨迹。
+    if (bag_index_to_trajectory_id.count(bag_index) == 0) 
+    {
+
       trajectory_id =
           node.AddOfflineTrajectory(bag_expected_sensor_ids.at(bag_index),
                                     bag_trajectory_options.at(bag_index));
+      // 将bag文件索引和轨迹ID添加到映射表中
       CHECK(bag_index_to_trajectory_id
                 .emplace(std::piecewise_construct,
                          std::forward_as_tuple(bag_index),
@@ -317,25 +353,35 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
                 .second);
       LOG(INFO) << "Assigned trajectory " << trajectory_id << " to bag "
                 << bag_filenames.at(bag_index);
-    } else {
+    } 
+    else 
+    {
       trajectory_id = bag_index_to_trajectory_id.at(bag_index);
     }
 
     const auto bag_topic = std::make_pair(
         bag_index,
         node.node_handle()->resolveName(msg.getTopic(), false /* resolve */));
+
     auto it = bag_topic_to_sensor_id.find(bag_topic);
-    if (it != bag_topic_to_sensor_id.end()) {
+
+    if (it != bag_topic_to_sensor_id.end()) 
+    {
       const std::string& sensor_id = it->second.id;
-      if (msg.isType<sensor_msgs::LaserScan>()) {
+      // 单回波激光扫描消息（2d）
+      if (msg.isType<sensor_msgs::LaserScan>()) 
+      {
         node.HandleLaserScanMessage(trajectory_id, sensor_id,
                                     msg.instantiate<sensor_msgs::LaserScan>());
       }
-      if (msg.isType<sensor_msgs::MultiEchoLaserScan>()) {
+      // 多回波激光扫描消息（3d）
+      if (msg.isType<sensor_msgs::MultiEchoLaserScan>()) 
+      {
         node.HandleMultiEchoLaserScanMessage(
             trajectory_id, sensor_id,
             msg.instantiate<sensor_msgs::MultiEchoLaserScan>());
       }
+      
       if (msg.isType<sensor_msgs::PointCloud2>()) {
         node.HandlePointCloud2Message(
             trajectory_id, sensor_id,

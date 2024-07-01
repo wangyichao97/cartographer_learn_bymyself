@@ -27,6 +27,13 @@ namespace cartographer_ros {
 
 class TfBridge {
  public:
+ /**
+  * @brief Construct a new Tf Bridge object
+  * 
+  * @param tracking_frame 要转换到的跟踪帧
+  * @param lookup_transform_timeout_sec 查找变换的超时时间（以秒为单位）
+  * @param buffer 指向 tf2_ros::Buffer 对象的指针，用于查找变换
+  */
   TfBridge(const std::string& tracking_frame,
            double lookup_transform_timeout_sec, const tf2_ros::Buffer* buffer);
   ~TfBridge() {}
@@ -40,8 +47,11 @@ class TfBridge {
       ::cartographer::common::Time time, const std::string& frame_id) const;
 
  private:
+  // 要转换到的跟踪帧
   const std::string tracking_frame_;
+  // 查找变换的超时时间
   const double lookup_transform_timeout_sec_;
+  // 指向 tf2_ros::Buffer 对象的指针，用于查找变换
   const tf2_ros::Buffer* const buffer_;
 };
 

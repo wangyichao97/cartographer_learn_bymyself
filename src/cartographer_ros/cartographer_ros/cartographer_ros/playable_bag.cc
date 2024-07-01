@@ -134,7 +134,8 @@ bool PlayableBagMultiplexer::IsMessageAvailable() const {
 }
 
 std::tuple<rosbag::MessageInstance, int, bool>
-PlayableBagMultiplexer::GetNextMessage() {
+PlayableBagMultiplexer::GetNextMessage() 
+{
   CHECK(IsMessageAvailable());
   const int current_bag_index = next_message_queue_.top().bag_index;
   PlayableBag& current_bag = playable_bags_.at(current_bag_index);

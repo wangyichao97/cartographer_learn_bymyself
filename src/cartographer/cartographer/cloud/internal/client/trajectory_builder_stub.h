@@ -65,7 +65,7 @@ class TrajectoryBuilderStub : public mapping::TrajectoryBuilderInterface {
           client_reader,
       LocalSlamResultCallback local_slam_result_callback);
 
-  std::shared_ptr<::grpc::Channel> client_channel_;
+  std::shared_ptr<::grpc::Channel> client_channel_; // 用于与远程服务器通信的通道
   const int trajectory_id_;
   const std::string client_id_;
   std::unique_ptr<async_grpc::Client<handlers::AddRangefinderDataSignature>>

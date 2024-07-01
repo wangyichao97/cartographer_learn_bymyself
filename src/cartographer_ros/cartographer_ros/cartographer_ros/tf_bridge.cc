@@ -30,21 +30,24 @@ TfBridge::TfBridge(const std::string& tracking_frame,
 
 std::unique_ptr<::cartographer::transform::Rigid3d> TfBridge::LookupToTracking(
     const ::cartographer::common::Time time,
-    const std::string& frame_id) const {
+    const std::string& frame_id) const 
+{
+  // 设定查找变换的超时时间
   ::ros::Duration timeout(lookup_transform_timeout_sec_);
+  // 存储变换结果
   std::unique_ptr<::cartographer::transform::Rigid3d> frame_id_to_tracking;
   try {
+    // 尝试查找最新变换并获取该变换的时间戳
     const ::ros::Time latest_tf_time =
-        buffer_
-            ->lookupTransform(tracking_frame_, frame_id, ::ros::Time(0.),
-                              timeout)
-            .header.stamp;
+        buffer_ ->lookupTransform(tracking_frame_, frame_id, ::ros::Time(0.), timeout).header.stamp;
     const ::ros::Time requested_time = ToRos(time);
+    // 检查最新变换时间是否足够新
     if (latest_tf_time >= requested_time) {
       // We already have newer data, so we do not wait. Otherwise, we would wait
       // for the full 'timeout' even if we ask for data that is too old.
       timeout = ::ros::Duration(0.);
     }
+    // 查找指定时间的变换并返回结果
     return absl::make_unique<::cartographer::transform::Rigid3d>(
         ToRigid3d(buffer_->lookupTransform(tracking_frame_, frame_id,
                                            requested_time, timeout)));

@@ -75,16 +75,22 @@ TrajectoryBuilderStub::~TrajectoryBuilderStub() {
 
 void TrajectoryBuilderStub::AddSensorData(
     const std::string& sensor_id,
-    const sensor::TimedPointCloudData& timed_point_cloud_data) {
-  if (!add_rangefinder_client_) {
+    const sensor::TimedPointCloudData& timed_point_cloud_data) 
+{
+  // 检查并创建客户端
+  if (!add_rangefinder_client_) 
+  {
     add_rangefinder_client_ = absl::make_unique<
         async_grpc::Client<handlers::AddRangefinderDataSignature>>(
         client_channel_);
   }
+  // 创建请求对象, 用于存储请求数据
   proto::AddRangefinderDataRequest request;
+  // 填充请求对象
   CreateAddRangeFinderDataRequest(sensor_id, trajectory_id_, client_id_,
                                   sensor::ToProto(timed_point_cloud_data),
                                   &request);
+  // 发送请求
   add_rangefinder_client_->Write(request);
 }
 

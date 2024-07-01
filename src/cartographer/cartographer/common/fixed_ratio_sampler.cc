@@ -29,9 +29,18 @@ FixedRatioSampler::FixedRatioSampler(const double ratio) : ratio_(ratio) {
 
 FixedRatioSampler::~FixedRatioSampler() {}
 
+/**
+ * @brief 这个方法决定了在调用时是否应该采样当前的数据。
+ * 
+ * @return true 表示当前数据点被采样
+ * @return false 
+ */
 bool FixedRatioSampler::Pulse() {
+  //  增加1，表示处理了一个新的数据点
   ++num_pulses_;
+  // 计算当前的采样比例，即当前采样的样本数与脉冲总数之比, 如果当前采样比例小于设定的 ratio_，则表示需要进行采样。
   if (static_cast<double>(num_samples_) / num_pulses_ < ratio_) {
+    // 如果需要采样，样本计数 num_samples_ 增加1
     ++num_samples_;
     return true;
   }
