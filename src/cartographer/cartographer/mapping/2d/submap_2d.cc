@@ -126,9 +126,12 @@ void Submap2D::UpdateFromProto(const proto::Submap& proto) {
 
 void Submap2D::ToResponseProto(
     const transform::Rigid3d&,
-    proto::SubmapQuery::Response* const response) const {
+    proto::SubmapQuery::Response* const response) const 
+{
+  // 检查网格是否存在
   if (!grid_) return;
   response->set_submap_version(num_range_data());
+  // 添加纹理信息
   proto::SubmapQuery::Response::SubmapTexture* const texture =
       response->add_textures();
   grid()->DrawToSubmapTexture(texture, local_pose());

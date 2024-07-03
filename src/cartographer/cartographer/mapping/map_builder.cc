@@ -102,7 +102,8 @@ MapBuilder::MapBuilder(const proto::MapBuilderOptions& options)
 int MapBuilder::AddTrajectoryBuilder(
     const std::set<SensorId>& expected_sensor_ids,
     const proto::TrajectoryBuilderOptions& trajectory_options,
-    LocalSlamResultCallback local_slam_result_callback) {
+    LocalSlamResultCallback local_slam_result_callback) 
+{
   const int trajectory_id = trajectory_builders_.size();
 
   absl::optional<MotionFilter> pose_graph_odometry_motion_filter;
@@ -180,13 +181,18 @@ int MapBuilder::AddTrajectoryForDeserialization(
   return trajectory_id;
 }
 
-void MapBuilder::FinishTrajectory(const int trajectory_id) {
+void MapBuilder::FinishTrajectory(const int trajectory_id) 
+{
+  // 调用传感器整理器完成轨迹
   sensor_collator_->FinishTrajectory(trajectory_id);
+  // 调用姿态图完成轨迹
   pose_graph_->FinishTrajectory(trajectory_id);
 }
 
+// 将子图数据转换为Proto响应格式
 std::string MapBuilder::SubmapToProto(
-    const SubmapId& submap_id, proto::SubmapQuery::Response* const response) {
+    const SubmapId& submap_id, proto::SubmapQuery::Response* const response) 
+{
   if (submap_id.trajectory_id < 0 ||
       submap_id.trajectory_id >= num_trajectory_builders()) {
     return "Requested submap from trajectory " +

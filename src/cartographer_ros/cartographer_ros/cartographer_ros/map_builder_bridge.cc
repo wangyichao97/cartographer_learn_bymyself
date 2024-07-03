@@ -122,7 +122,8 @@ void MapBuilderBridge::LoadState(const std::string& state_filename,
 int MapBuilderBridge::AddTrajectory(
     const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>&
         expected_sensor_ids,
-    const TrajectoryOptions& trajectory_options) {
+    const TrajectoryOptions& trajectory_options) 
+{
   const int trajectory_id = map_builder_->AddTrajectoryBuilder(
       expected_sensor_ids, trajectory_options.trajectory_builder_options,
       [this](const int trajectory_id, const ::cartographer::common::Time time,
@@ -171,12 +172,16 @@ bool MapBuilderBridge::SerializeState(const std::string& filename,
 
 void MapBuilderBridge::HandleSubmapQuery(
     cartographer_ros_msgs::SubmapQuery::Request& request,
-    cartographer_ros_msgs::SubmapQuery::Response& response) {
+    cartographer_ros_msgs::SubmapQuery::Response& response) 
+{
+  //获取子图信息
   cartographer::mapping::proto::SubmapQuery::Response response_proto;
   cartographer::mapping::SubmapId submap_id{request.trajectory_id,
                                             request.submap_index};
+  // 指定子图转换为response_proto格式
   const std::string error =
       map_builder_->SubmapToProto(submap_id, &response_proto);
+      
   if (!error.empty()) {
     LOG(ERROR) << error;
     response.status.code = cartographer_ros_msgs::StatusCode::NOT_FOUND;
@@ -201,7 +206,8 @@ void MapBuilderBridge::HandleSubmapQuery(
 }
 
 std::map<int, ::cartographer::mapping::PoseGraphInterface::TrajectoryState>
-MapBuilderBridge::GetTrajectoryStates() {
+MapBuilderBridge::GetTrajectoryStates() 
+{
   auto trajectory_states = map_builder_->pose_graph()->GetTrajectoryStates();
   // Add active trajectories that are not yet in the pose graph, but are e.g.
   // waiting for input sensor data and thus already have a sensor bridge.

@@ -87,7 +87,8 @@ constexpr int kSingleThreaded = 1;
 // always interpolate.
 const ::ros::Duration kDelay = ::ros::Duration(1.0);
 
-void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
+void RunOfflineNode(const MapBuilderFactory& map_builder_factory) 
+{
   CHECK(!FLAGS_configuration_directory.empty())
       << "-configuration_directory is missing.";
   CHECK(!FLAGS_configuration_basenames.empty())
@@ -381,33 +382,41 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
             trajectory_id, sensor_id,
             msg.instantiate<sensor_msgs::MultiEchoLaserScan>());
       }
-      
+      // 点云信息
       if (msg.isType<sensor_msgs::PointCloud2>()) {
         node.HandlePointCloud2Message(
             trajectory_id, sensor_id,
             msg.instantiate<sensor_msgs::PointCloud2>());
       }
+      // IMU信息
       if (msg.isType<sensor_msgs::Imu>()) {
         node.HandleImuMessage(trajectory_id, sensor_id,
                               msg.instantiate<sensor_msgs::Imu>());
       }
+      
+      // odom信息
       if (msg.isType<nav_msgs::Odometry>()) {
         node.HandleOdometryMessage(trajectory_id, sensor_id,
                                    msg.instantiate<nav_msgs::Odometry>());
       }
+
+      // GNSS消息
       if (msg.isType<sensor_msgs::NavSatFix>()) {
         node.HandleNavSatFixMessage(trajectory_id, sensor_id,
                                     msg.instantiate<sensor_msgs::NavSatFix>());
       }
+      
+      //
       if (msg.isType<cartographer_ros_msgs::LandmarkList>()) {
         node.HandleLandmarkMessage(
             trajectory_id, sensor_id,
             msg.instantiate<cartographer_ros_msgs::LandmarkList>());
       }
     }
+    // 发布时钟消息
     clock.clock = msg.getTime();
     clock_publisher.publish(clock);
-
+    // 结束轨迹处理：
     if (is_last_message_in_bag) {
       node.FinishTrajectory(trajectory_id);
     }
@@ -416,6 +425,7 @@ void RunOfflineNode(const MapBuilderFactory& map_builder_factory) {
   // Ensure the clock is republished after the bag has been finished, during the
   // final optimization, serialization, and optional indefinite spinning at the
   // end.
+  // 启动时钟重新发布定时器：
   clock_republish_timer.start();
   node.RunFinalOptimization();
 

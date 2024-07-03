@@ -213,11 +213,19 @@ void Node::AddExtrapolator(const int trajectory_id,
                 .imu_gravity_time_constant()
           : options.trajectory_builder_options.trajectory_builder_2d_options()
                 .imu_gravity_time_constant();
+  /**
+   * @brief 使用 emplace 方法将一个新的外推器对象添加到 extrapolators_ 容器中
+   * std::piecewise_construct 是一个标记类型，用于通知 emplace 分别构造键和值，允许将构造键和值所需的参数分别传递给键和值的构造函数
+   * std::forward_as_tuple(trajectory_id) 创建一个包含 trajectory_id 的 tuple，用于构造 extrapolators_ 容器中的键。
+   * 创建一个包含两个参数的 tuple，用于构造外推器对象。
+   */
   extrapolators_.emplace(
-      std::piecewise_construct, std::forward_as_tuple(trajectory_id),
+      std::piecewise_construct, 
+      std::forward_as_tuple(trajectory_id),
       std::forward_as_tuple(
-          ::cartographer::common::FromSeconds(kExtrapolationEstimationTimeSec),
-          gravity_time_constant));
+          ::cartographer::common::FromSeconds(kExtrapolationEstimationTimeSec),// 将常量 kExtrapolationEstimationTimeSec 转换为 cartographer::common::Time 类型
+          gravity_time_constant // 从 TrajectoryOptions 中获取的重力时间常数
+          ));
 }
 
 void Node::AddSensorSamplers(const int trajectory_id,
@@ -406,7 +414,8 @@ Node::ComputeExpectedSensorIds(const TrajectoryOptions& options) const {
   return expected_topics;
 }
 
-int Node::AddTrajectory(const TrajectoryOptions& options) {
+int Node::AddTrajectory(const TrajectoryOptions& options) 
+{
   const std::set<cartographer::mapping::TrajectoryBuilderInterface::SensorId>
       expected_sensor_ids = ComputeExpectedSensorIds(options);
   const int trajectory_id =
@@ -509,8 +518,10 @@ bool Node::ValidateTopicNames(const TrajectoryOptions& options) {
   return true;
 }
 
+// 将给定轨迹的状态转换为一个cartographer_ros_msgs::StatusResponse对象
 cartographer_ros_msgs::StatusResponse Node::TrajectoryStateToStatus(
-    const int trajectory_id, const std::set<TrajectoryState>& valid_states) {
+    const int trajectory_id, const std::set<TrajectoryState>& valid_states) 
+{
   const auto trajectory_states = map_builder_bridge_.GetTrajectoryStates();
   cartographer_ros_msgs::StatusResponse status_response;
 
@@ -532,10 +543,14 @@ cartographer_ros_msgs::StatusResponse Node::TrajectoryStateToStatus(
   return status_response;
 }
 
+
 cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
-    const int trajectory_id) {
+    const int trajectory_id) 
+{
+  // // 确保了对轨迹完成计划的检查和实际操作的处理
   cartographer_ros_msgs::StatusResponse status_response;
-  if (trajectories_scheduled_for_finish_.count(trajectory_id)) {
+  if (trajectories_scheduled_for_finish_.count(trajectory_id)) 
+  {
     status_response.message = absl::StrCat("Trajectory ", trajectory_id,
                                            " already pending to finish.");
     status_response.code = cartographer_ros_msgs::StatusCode::OK;
@@ -546,19 +561,24 @@ cartographer_ros_msgs::StatusResponse Node::FinishTrajectoryUnderLock(
   // First, check if we can actually finish the trajectory.
   status_response = TrajectoryStateToStatus(
       trajectory_id, {TrajectoryState::ACTIVE} /* valid states */);
-  if (status_response.code != cartographer_ros_msgs::StatusCode::OK) {
+  if (status_response.code != cartographer_ros_msgs::StatusCode::OK) 
+  {
     LOG(ERROR) << "Can't finish trajectory: " << status_response.message;
     return status_response;
   }
 
   // Shutdown the subscribers of this trajectory.
   // A valid case with no subscribers is e.g. if we just visualize states.
-  if (subscribers_.count(trajectory_id)) {
+  // 检查订阅者是否存在：
+  if (subscribers_.count(trajectory_id)) 
+  {
+    // 关闭订阅者
     for (auto& entry : subscribers_[trajectory_id]) {
       entry.subscriber.shutdown();
       subscribed_topics_.erase(entry.topic);
       LOG(INFO) << "Shutdown the subscriber of [" << entry.topic << "]";
     }
+    // 清理数据
     CHECK_EQ(subscribers_.erase(trajectory_id), 1);
   }
   map_builder_bridge_.FinishTrajectory(trajectory_id);
@@ -762,13 +782,17 @@ bool Node::FinishTrajectory(const int trajectory_id) {
 
 void Node::RunFinalOptimization() {
   {
-    for (const auto& entry : map_builder_bridge_.GetTrajectoryStates()) {
+    // 获取所有轨迹的状态，然后遍历每个轨迹状态
+    for (const auto& entry : map_builder_bridge_.GetTrajectoryStates()) 
+    {
       const int trajectory_id = entry.first;
-      if (entry.second == TrajectoryState::ACTIVE) {
+      if (entry.second == TrajectoryState::ACTIVE) 
+      {
         LOG(WARNING)
             << "Can't run final optimization if there are one or more active "
                "trajectories. Trying to finish trajectory with ID "
             << std::to_string(trajectory_id) << " now.";
+        // 尝试完成轨迹
         CHECK(FinishTrajectory(trajectory_id))
             << "Failed to finish trajectory with ID "
             << std::to_string(trajectory_id) << ".";
@@ -789,8 +813,10 @@ void Node::HandleOdometryMessage(const int trajectory_id,
   }
   auto sensor_bridge_ptr = map_builder_bridge_.sensor_bridge(trajectory_id);
   auto odometry_data_ptr = sensor_bridge_ptr->ToOdometryData(msg);
+
   if (odometry_data_ptr != nullptr &&
-      !sensor_bridge_ptr->IgnoreMessage(sensor_id, odometry_data_ptr->time)) {
+      !sensor_bridge_ptr->IgnoreMessage(sensor_id, odometry_data_ptr->time)) 
+  {
     extrapolators_.at(trajectory_id).AddOdometryData(*odometry_data_ptr);
   }
   sensor_bridge_ptr->HandleOdometryMessage(sensor_id, msg);
@@ -798,19 +824,23 @@ void Node::HandleOdometryMessage(const int trajectory_id,
 
 void Node::HandleNavSatFixMessage(const int trajectory_id,
                                   const std::string& sensor_id,
-                                  const sensor_msgs::NavSatFix::ConstPtr& msg) {
+                                  const sensor_msgs::NavSatFix::ConstPtr& msg) 
+{
   absl::MutexLock lock(&mutex_);
   if (!sensor_samplers_.at(trajectory_id).fixed_frame_pose_sampler.Pulse()) {
     return;
   }
+  // 处理来自GNSS的定位消息
   map_builder_bridge_.sensor_bridge(trajectory_id)
       ->HandleNavSatFixMessage(sensor_id, msg);
 }
 
 void Node::HandleLandmarkMessage(
     const int trajectory_id, const std::string& sensor_id,
-    const cartographer_ros_msgs::LandmarkList::ConstPtr& msg) {
+    const cartographer_ros_msgs::LandmarkList::ConstPtr& msg) 
+{
   absl::MutexLock lock(&mutex_);
+  // 通过 landmark_sampler 来判断是否应该处理当前的地标消息
   if (!sensor_samplers_.at(trajectory_id).landmark_sampler.Pulse()) {
     return;
   }
@@ -825,10 +855,18 @@ void Node::HandleImuMessage(const int trajectory_id,
   if (!sensor_samplers_.at(trajectory_id).imu_sampler.Pulse()) {
     return;
   }
+  // 获取 trajectory_id 对应的传感器桥对象
   auto sensor_bridge_ptr = map_builder_bridge_.sensor_bridge(trajectory_id);
   auto imu_data_ptr = sensor_bridge_ptr->ToImuData(msg);
+
+  // 检查IMU数据有效性并添加到外推器
   if (imu_data_ptr != nullptr &&
-      !sensor_bridge_ptr->IgnoreMessage(sensor_id, imu_data_ptr->time)) {
+      !sensor_bridge_ptr->IgnoreMessage(sensor_id, imu_data_ptr->time)) 
+  {
+    /**
+     * 是一个包含外推器对象的容器（例如 std::unordered_map<int, Extrapolator>），使用 trajectory_id 作为键访问相应轨迹的外推器。
+     * AddImuData 方法用于将 IMU 数据添加到外推器中进行修剪
+     */
     extrapolators_.at(trajectory_id).AddImuData(*imu_data_ptr);
   }
   sensor_bridge_ptr->HandleImuMessage(sensor_id, msg);

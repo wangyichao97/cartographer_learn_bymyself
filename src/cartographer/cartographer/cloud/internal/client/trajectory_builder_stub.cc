@@ -108,7 +108,9 @@ void TrajectoryBuilderStub::AddSensorData(const std::string& sensor_id,
 }
 
 void TrajectoryBuilderStub::AddSensorData(
-    const std::string& sensor_id, const sensor::OdometryData& odometry_data) {
+    const std::string& sensor_id, const sensor::OdometryData& odometry_data) 
+{
+  // 检查并初始化客户端
   if (!add_odometry_client_) {
     add_odometry_client_ = absl::make_unique<
         async_grpc::Client<handlers::AddOdometryDataSignature>>(
@@ -122,7 +124,8 @@ void TrajectoryBuilderStub::AddSensorData(
 
 void TrajectoryBuilderStub::AddSensorData(
     const std::string& sensor_id,
-    const sensor::FixedFramePoseData& fixed_frame_pose) {
+    const sensor::FixedFramePoseData& fixed_frame_pose) 
+{
   if (!add_fixed_frame_pose_client_) {
     add_fixed_frame_pose_client_ = absl::make_unique<
         async_grpc::Client<handlers::AddFixedFramePoseDataSignature>>(

@@ -218,7 +218,8 @@ class Node {
   };
 
   // These are keyed with 'trajectory_id'.
-  std::map<int, ::cartographer::mapping::PoseExtrapolator> extrapolators_;
+  // 姿态外推器 
+  std::map<int, ::cartographer::mapping::PoseExtrapolator> extrapolators_;  
   std::map<int, ::ros::Time> last_published_tf_stamps_;
   std::unordered_map<int, TrajectorySensorSamplers> sensor_samplers_;
   std::unordered_map<int, std::vector<Subscriber>> subscribers_;

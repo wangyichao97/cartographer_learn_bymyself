@@ -88,44 +88,70 @@ void PoseExtrapolator::AddPose(const common::Time time,
   extrapolation_imu_tracker_ = absl::make_unique<ImuTracker>(*imu_tracker_);
 }
 
-void PoseExtrapolator::AddImuData(const sensor::ImuData& imu_data) {
+void PoseExtrapolator::AddImuData(const sensor::ImuData& imu_data) 
+{
+  // 检查 IMU 数据的时间戳
   CHECK(timed_pose_queue_.empty() ||
         imu_data.time >= timed_pose_queue_.back().time);
+  // 添加 IMU 数据
   imu_data_.push_back(imu_data);
+  // 修剪 IMU 数据
   TrimImuData();
 }
 
-void PoseExtrapolator::AddOdometryData(
-    const sensor::OdometryData& odometry_data) {
+void PoseExtrapolator::AddOdometryData(const sensor::OdometryData& odometry_data) 
+{
+  // 检查时间是否是最新的
   CHECK(timed_pose_queue_.empty() ||
         odometry_data.time >= timed_pose_queue_.back().time);
   odometry_data_.push_back(odometry_data);
   TrimOdometryData();
-  if (odometry_data_.size() < 2) {
+
+  if (odometry_data_.size() < 2) 
+  {
     return;
   }
   // TODO(whess): Improve by using more than just the last two odometry poses.
   // Compute extrapolation in the tracking frame.
+  // 获取最旧和最新的里程计数据
   const sensor::OdometryData& odometry_data_oldest = odometry_data_.front();
   const sensor::OdometryData& odometry_data_newest = odometry_data_.back();
+  // 计算时间差
   const double odometry_time_delta =
       common::ToSeconds(odometry_data_oldest.time - odometry_data_newest.time);
+  // 计算姿态变化
   const transform::Rigid3d odometry_pose_delta =
       odometry_data_newest.pose.inverse() * odometry_data_oldest.pose;
+  /**
+   * @brief 计算角速度
+   * odometry_pose_delta.rotation() 获取从最旧姿态到最新姿态的旋转变换
+   * transform::RotationQuaternionToAngleAxisVector 函数，将旋转四元数转换为角轴向量。
+   * 将角轴向量除以时间差 odometry_time_delta，得到角速度向量
+   */
   angular_velocity_from_odometry_ =
       transform::RotationQuaternionToAngleAxisVector(
           odometry_pose_delta.rotation()) /
       odometry_time_delta;
+    
   if (timed_pose_queue_.empty()) {
     return;
   }
-  const Eigen::Vector3d
-      linear_velocity_in_tracking_frame_at_newest_odometry_time =
+
+  // 计算线速度
+  const Eigen::Vector3d linear_velocity_in_tracking_frame_at_newest_odometry_time =
           odometry_pose_delta.translation() / odometry_time_delta;
+
+  /**
+   * @brief 根据IMU数据外推最新时刻下的姿态，里程计数据通常更擅长提供平移信息，而IMU可以更好地提供旋转信息。
+   * timed_pose_queue_.back().pose.rotation() 获取最新的姿态的旋转信息
+   * ExtrapolateRotation() 根据 IMU 数据外推计算最新里程计数据时间下的旋转信息
+   * 最新姿态队列中的旋转与根据 IMU 数据外推得到的旋转相乘，得到在最新里程计数据时间点的姿态。
+   */
   const Eigen::Quaterniond orientation_at_newest_odometry_time =
       timed_pose_queue_.back().pose.rotation() *
       ExtrapolateRotation(odometry_data_newest.time,
                           odometry_imu_tracker_.get());
+  // 通过将最新里程计数据时间点的姿态与在该时间点的线速度相乘来得到线速度在世界坐标系下的表示
   linear_velocity_from_odometry_ =
       orientation_at_newest_odometry_time *
       linear_velocity_in_tracking_frame_at_newest_odometry_time;
@@ -179,9 +205,15 @@ void PoseExtrapolator::UpdateVelocitiesFromPoses() {
       queue_delta;
 }
 
-void PoseExtrapolator::TrimImuData() {
-  while (imu_data_.size() > 1 && !timed_pose_queue_.empty() &&
-         imu_data_[1].time <= timed_pose_queue_.back().time) {
+// 移除那些时间戳早于或等于最新姿态时间戳的数据
+void PoseExtrapolator::TrimImuData() 
+{
+  while (imu_data_.size() > 1 // 确保 IMU 数据队列中至少有两个元素
+        && !timed_pose_queue_.empty() // 确保姿态数据队列不为空
+        // 检查第二个 IMU 数据的时间戳是否小于或等于姿态数据队列中最新姿态的时间戳
+        && imu_data_[1].time <= timed_pose_queue_.back().time) 
+  {
+    // 从队列的前端移除一个 IMU 数据点
     imu_data_.pop_front();
   }
 }

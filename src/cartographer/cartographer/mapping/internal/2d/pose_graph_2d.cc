@@ -838,7 +838,8 @@ void PoseGraph2D::AddTrimmer(std::unique_ptr<PoseGraphTrimmer> trimmer) {
   });
 }
 
-void PoseGraph2D::RunFinalOptimization() {
+void PoseGraph2D::RunFinalOptimization() 
+{
   {
     AddWorkItem([this]() LOCKS_EXCLUDED(mutex_) {
       absl::MutexLock locker(&mutex_);
@@ -1081,7 +1082,8 @@ std::vector<std::vector<int>> PoseGraph2D::GetConnectedTrajectories() const {
 }
 
 PoseGraphInterface::SubmapData PoseGraph2D::GetSubmapData(
-    const SubmapId& submap_id) const {
+    const SubmapId& submap_id) const 
+{
   absl::MutexLock locker(&mutex_);
   return GetSubmapDataUnderLock(submap_id);
 }
@@ -1130,8 +1132,8 @@ transform::Rigid3d PoseGraph2D::ComputeLocalToGlobalTransform(
              .inverse();
 }
 
-PoseGraphInterface::SubmapData PoseGraph2D::GetSubmapDataUnderLock(
-    const SubmapId& submap_id) const {
+PoseGraphInterface::SubmapData PoseGraph2D::GetSubmapDataUnderLock(const SubmapId& submap_id) const 
+{
   const auto it = data_.submap_data.find(submap_id);
   if (it == data_.submap_data.end()) {
     return {};
@@ -1139,14 +1141,15 @@ PoseGraphInterface::SubmapData PoseGraph2D::GetSubmapDataUnderLock(
   auto submap = it->data.submap;
   if (data_.global_submap_poses_2d.Contains(submap_id)) {
     // We already have an optimized pose.
+    // 检查子图是否有优化过的位姿
     return {submap,
             transform::Embed3D(
                 data_.global_submap_poses_2d.at(submap_id).global_pose)};
   }
   // We have to extrapolate.
-  return {submap, ComputeLocalToGlobalTransform(data_.global_submap_poses_2d,
-                                                submap_id.trajectory_id) *
-                      submap->local_pose()};
+  // 计算局部到全局的转换
+  return {submap, 
+          ComputeLocalToGlobalTransform(data_.global_submap_poses_2d, ) * submap->local_pose()};
 }
 
 PoseGraph2D::TrimmingHandle::TrimmingHandle(PoseGraph2D* const parent)

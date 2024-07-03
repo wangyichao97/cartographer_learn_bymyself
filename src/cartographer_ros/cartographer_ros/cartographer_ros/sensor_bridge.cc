@@ -62,7 +62,8 @@ std::unique_ptr<carto::sensor::OdometryData> SensorBridge::ToOdometryData(
           time, ToRigid3d(msg->pose.pose) * sensor_to_tracking->inverse()});
 }
 
-bool SensorBridge::IgnoreMessage(const std::string& sensor_id,
+// 如果消息的时间戳早于或等于上一次处理的消息时间戳，并且配置了忽略乱序消息，则该消息将被忽略
+bool SensorBridge:: IgnoreMessage(const std::string& sensor_id,
                                  cartographer::common::Time sensor_time) {
   if (!ignore_out_of_order_messages_) {
     return false;
@@ -75,10 +76,13 @@ bool SensorBridge::IgnoreMessage(const std::string& sensor_id,
 }
 
 void SensorBridge::HandleOdometryMessage(
-    const std::string& sensor_id, const nav_msgs::Odometry::ConstPtr& msg) {
-  std::unique_ptr<carto::sensor::OdometryData> odometry_data =
-      ToOdometryData(msg);
-  if (odometry_data != nullptr) {
+    const std::string& sensor_id, const nav_msgs::Odometry::ConstPtr& msg) 
+{
+  // 转换里程计消息
+  std::unique_ptr<carto::sensor::OdometryData> odometry_data = ToOdometryData(msg);
+  // 检查数据有效性
+  if (odometry_data != nullptr) 
+  {
     if (IgnoreMessage(sensor_id, odometry_data->time)) {
       LOG(WARNING) << "Ignored odometry message from sensor " << sensor_id
                    << " because sensor time " << odometry_data->time
@@ -86,7 +90,9 @@ void SensorBridge::HandleOdometryMessage(
                    << latest_sensor_time_[sensor_id];
       return;
     }
+    // 更新最后一次接收消息的时间
     latest_sensor_time_[sensor_id] = odometry_data->time;
+    // 添加里程计数据到轨迹构建器
     trajectory_builder_->AddSensorData(
         sensor_id,
         carto::sensor::OdometryData{odometry_data->time, odometry_data->pose});
@@ -94,15 +100,19 @@ void SensorBridge::HandleOdometryMessage(
 }
 
 void SensorBridge::HandleNavSatFixMessage(
-    const std::string& sensor_id, const sensor_msgs::NavSatFix::ConstPtr& msg) {
+    const std::string& sensor_id, const sensor_msgs::NavSatFix::ConstPtr& msg) 
+{
+  // 时间戳转换
   const carto::common::Time time = FromRos(msg->header.stamp);
+  // 无定位时
   if (msg->status.status == sensor_msgs::NavSatStatus::STATUS_NO_FIX) {
     trajectory_builder_->AddSensorData(
         sensor_id,
         carto::sensor::FixedFramePoseData{time, absl::optional<Rigid3d>()});
     return;
   }
-
+  //坐标转换初始化：
+  // 如果尚未计算本地坐标系的转换（ecef_to_local_frame_），则根据定位消息的经纬度计算出本地坐标系。
   if (!ecef_to_local_frame_.has_value()) {
     ecef_to_local_frame_ =
         ComputeLocalFrameFromLatLong(msg->latitude, msg->longitude);
@@ -110,9 +120,15 @@ void SensorBridge::HandleNavSatFixMessage(
               << msg->latitude << ", long = " << msg->longitude << ".";
   }
 
+  /**
+   * @brief 将处理过的定位数据添加到轨迹构建器中
+   * 
+   */
   trajectory_builder_->AddSensorData(
       sensor_id, carto::sensor::FixedFramePoseData{
-                     time, absl::optional<Rigid3d>(Rigid3d::Translation(
+                     time, 
+                     // 定位数据有效，就会创建一个包含姿态信息的 Rigid3d 对象。
+                     absl::optional<Rigid3d>(Rigid3d::Translation(
                                ecef_to_local_frame_.value() *
                                LatLongAltToEcef(msg->latitude, msg->longitude,
                                                 msg->altitude)))});
@@ -120,13 +136,20 @@ void SensorBridge::HandleNavSatFixMessage(
 
 void SensorBridge::HandleLandmarkMessage(
     const std::string& sensor_id,
-    const cartographer_ros_msgs::LandmarkList::ConstPtr& msg) {
+    const cartographer_ros_msgs::LandmarkList::ConstPtr& msg) 
+{
+  // 地标消息转换为 landmark_data 结构体
   auto landmark_data = ToLandmarkData(*msg);
 
+  // 查找传感器到跟踪坐标系的变换
   auto tracking_from_landmark_sensor = tf_bridge_.LookupToTracking(
       landmark_data.time, CheckNoLeadingSlash(msg->header.frame_id));
-  if (tracking_from_landmark_sensor != nullptr) {
-    for (auto& observation : landmark_data.landmark_observations) {
+
+  if (tracking_from_landmark_sensor != nullptr) 
+  {
+    // 转换地标到跟踪坐标系下
+    for (auto& observation : landmark_data.landmark_observations) 
+    {
       observation.landmark_to_tracking_transform =
           *tracking_from_landmark_sensor *
           observation.landmark_to_tracking_transform;
@@ -136,7 +159,9 @@ void SensorBridge::HandleLandmarkMessage(
 }
 
 std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
-    const sensor_msgs::Imu::ConstPtr& msg) {
+    const sensor_msgs::Imu::ConstPtr& msg) 
+{
+  // 检查 IMU 数据的有效性
   CHECK_NE(msg->linear_acceleration_covariance[0], -1)
       << "Your IMU data claims to not contain linear acceleration measurements "
          "by setting linear_acceleration_covariance[0] to -1. Cartographer "
@@ -147,8 +172,9 @@ std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
          "by setting angular_velocity_covariance[0] to -1. Cartographer "
          "requires this data to work. See "
          "http://docs.ros.org/api/sensor_msgs/html/msg/Imu.html.";
-
+  // 时间戳转换为Cartographer 使用的 carto::common::Time 类型。
   const carto::common::Time time = FromRos(msg->header.stamp);
+  // 查找传感器到跟踪坐标系的变换
   const auto sensor_to_tracking = tf_bridge_.LookupToTracking(
       time, CheckNoLeadingSlash(msg->header.frame_id));
   if (sensor_to_tracking == nullptr) {
@@ -158,13 +184,17 @@ std::unique_ptr<carto::sensor::ImuData> SensorBridge::ToImuData(
       << "The IMU frame must be colocated with the tracking frame. "
          "Transforming linear acceleration into the tracking frame will "
          "otherwise be imprecise.";
-  return absl::make_unique<carto::sensor::ImuData>(carto::sensor::ImuData{
-      time, sensor_to_tracking->rotation() * ToEigen(msg->linear_acceleration),
-      sensor_to_tracking->rotation() * ToEigen(msg->angular_velocity)});
+  // 创建并返回 ImuData 对象
+  return absl::make_unique<carto::sensor::ImuData>(carto::sensor::ImuData{  //构造对象
+      time, // 时间戳
+      sensor_to_tracking->rotation() * ToEigen(msg->linear_acceleration), //将线性加速度从传感器坐标系转换到跟踪坐标系
+      sensor_to_tracking->rotation() * ToEigen(msg->angular_velocity)});  // 将角速度从传感器坐标系转换到跟踪坐标系
 }
 
 void SensorBridge::HandleImuMessage(const std::string& sensor_id,
-                                    const sensor_msgs::Imu::ConstPtr& msg) {
+                                    const sensor_msgs::Imu::ConstPtr& msg) 
+{
+  // 将 ROS IMU 消息转换为 Cartographer IMU 数据
   std::unique_ptr<carto::sensor::ImuData> imu_data = ToImuData(msg);
   if (imu_data != nullptr) {
     if (IgnoreMessage(sensor_id, imu_data->time)) {
@@ -174,10 +204,13 @@ void SensorBridge::HandleImuMessage(const std::string& sensor_id,
                    << latest_sensor_time_[sensor_id];
       return;
     }
+    // 更新最新的传感器时间
     latest_sensor_time_[sensor_id] = imu_data->time;
+    // 添加 IMU 数据到轨迹构建器
     trajectory_builder_->AddSensorData(
         sensor_id,
-        carto::sensor::ImuData{imu_data->time, imu_data->linear_acceleration,
+        carto::sensor::ImuData{imu_data->time, 
+                               imu_data->linear_acceleration,
                                imu_data->angular_velocity});
   }
 }

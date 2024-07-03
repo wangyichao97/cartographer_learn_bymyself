@@ -33,8 +33,11 @@ void Collator::AddTrajectory(
   }
 }
 
-void Collator::FinishTrajectory(const int trajectory_id) {
-  for (const auto& queue_key : queue_keys_[trajectory_id]) {
+void Collator::FinishTrajectory(const int trajectory_id) 
+{
+  // 遍历队列键
+  for (const auto& queue_key : queue_keys_[trajectory_id]) 
+  {
     queue_.MarkQueueAsFinished(queue_key);
   }
 }
