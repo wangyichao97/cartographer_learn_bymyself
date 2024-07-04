@@ -45,7 +45,7 @@ class CollatedTrajectoryBuilder : public TrajectoryBuilderInterface {
       sensor::CollatorInterface* sensor_collator, int trajectory_id,
       const std::set<SensorId>& expected_sensor_ids,
       std::unique_ptr<TrajectoryBuilderInterface> wrapped_trajectory_builder);
-  ~CollatedTrajectoryBuilder() override {}
+  ~CollatedTrajectoryBuilder() override {}  
 
   CollatedTrajectoryBuilder(const CollatedTrajectoryBuilder&) = delete;
   CollatedTrajectoryBuilder& operator=(const CollatedTrajectoryBuilder&) =

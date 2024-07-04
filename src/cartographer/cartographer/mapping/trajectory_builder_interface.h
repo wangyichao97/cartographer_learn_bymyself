@@ -48,8 +48,11 @@ class LocalSlamResultData;
 class TrajectoryBuilderInterface {
  public:
   struct InsertionResult {
+    // 轨迹节点的ID
     NodeId node_id;
+    // 指向轨迹节点数据的共享指针
     std::shared_ptr<const TrajectoryNode::Data> constant_data;
+    // 包含插入的子地图的共享指针数组
     std::vector<std::shared_ptr<const Submap>> insertion_submaps;
   };
 
@@ -58,8 +61,11 @@ class TrajectoryBuilderInterface {
   // assigned 'NodeId', otherwise 'nullptr' if the data was filtered out.
   using LocalSlamResultCallback =
       std::function<void(int /* trajectory ID */, common::Time,
+                         // 局部位姿估计
                          transform::Rigid3d /* local pose estimate */,
+                         // 局部坐标系中的传感器范围数据
                          sensor::RangeData /* in local frame */,
+                         // 指向插入结果
                          std::unique_ptr<const InsertionResult>)>;
 
   struct SensorId {

@@ -43,13 +43,18 @@ namespace mapping {
 // TODO(gaschler): Add test for this class similar to the 3D test.
 class LocalTrajectoryBuilder2D {
  public:
-  struct InsertionResult {
+  struct InsertionResult 
+  {
+    // 指向轨迹节点数据的共享指针，保存插入的轨迹节点的数据
     std::shared_ptr<const TrajectoryNode::Data> constant_data;
+    // 包含插入的子地图的共享指针数组，记录与插入的轨迹节点相关的子地图
     std::vector<std::shared_ptr<const Submap2D>> insertion_submaps;
   };
+
   struct MatchingResult {
     common::Time time;
     transform::Rigid3d local_pose;
+    // 局部坐标系中的传感器范围数据
     sensor::RangeData range_data_in_local;
     // 'nullptr' if dropped by the motion filter.
     std::unique_ptr<const InsertionResult> insertion_result;
@@ -99,14 +104,18 @@ class LocalTrajectoryBuilder2D {
   // Lazily constructs a PoseExtrapolator.
   void InitializeExtrapolator(common::Time time);
 
+  // 存储2D局部轨迹构建器的配置选项
   const proto::LocalTrajectoryBuilderOptions2D options_;
+  // 管理活动的子地图
   ActiveSubmaps2D active_submaps_;
 
+  // 用于滤除不必要的运动数据
   MotionFilter motion_filter_;
-  scan_matching::RealTimeCorrelativeScanMatcher2D
-      real_time_correlative_scan_matcher_;
+  // 实时相关性扫描匹配器
+  scan_matching::RealTimeCorrelativeScanMatcher2D real_time_correlative_scan_matcher_;
+  // 基于Ceres优化库的扫描匹配器
   scan_matching::CeresScanMatcher2D ceres_scan_matcher_;
-
+  // 位姿外推器
   std::unique_ptr<PoseExtrapolator> extrapolator_;
 
   int num_accumulated_ = 0;
@@ -115,7 +124,7 @@ class LocalTrajectoryBuilder2D {
   absl::optional<std::chrono::steady_clock::time_point> last_wall_time_;
   absl::optional<double> last_thread_cpu_time_seconds_;
   absl::optional<common::Time> last_sensor_time_;
-
+  //范围数据整理器，用于将不同传感器的数据整理成一个统一的数据流，以便后续处理
   RangeDataCollator range_data_collator_;
 };
 
